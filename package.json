@@ -1,14 +1,21 @@
 {
-  "name": "baardefisecurity",
+  "name": "evac",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run"
   },
   "dependencies": {
+    "@near-wallet-selector/core": "^10.1.4",
+    "@near-wallet-selector/hot-wallet": "^10.1.4",
+    "@near-wallet-selector/meteor-wallet": "^10.1.4",
+    "@near-wallet-selector/modal-ui": "^10.1.4",
+    "@near-wallet-selector/my-near-wallet": "^10.1.4",
+    "near-api-js": "^6.2.5",
     "next": "16.4.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"
@@ -21,6 +28,9 @@
     "eslint": "^9",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "tsx": "^4.23.15",
+    "typescript": "^5",
+    "vite": "^8.3.7",
+    "vitest": "^5.1.0"
   }
 }
