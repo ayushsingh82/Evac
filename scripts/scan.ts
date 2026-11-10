@@ -1,8 +1,9 @@
 // Usage: npx tsx scripts/scan.ts <account.near>
 // Reads Burrow positions through the RPC quorum and prints the exit plan checked by the Exit Guard.
-import { planExit, scanBurrow } from "../src/lib/burrow";
+import { planExit, scanBurrow, withdrawnTokens } from "../src/lib/burrow";
 import { checkTx } from "../src/lib/guard";
 import { BURROW_MANIFEST } from "../src/lib/manifest";
+import { checkStorage } from "../src/lib/storage";
 
 const account = process.argv[2];
 
@@ -26,7 +27,11 @@ async function main() {
   show("collateral", position.collateral);
   show("borrowed", position.borrowed);
 
-  const plan = planExit(position);
+  // Leave out tokens the account isn't registered with: their withdrawal would be refunded.
+  const first = planExit(position);
+  const checks = await checkStorage(account, withdrawnTokens(first));
+  const unreg = new Set(checks.filter((c) => c.registered === false).map((c) => c.token));
+  const plan = unreg.size ? planExit(position, { skip: unreg }) : first;
   console.log(`\nExit plan: ${plan.kind}`);
   plan.notes.forEach((n) => console.log(`  note: ${n}`));
   for (const s of plan.steps) {

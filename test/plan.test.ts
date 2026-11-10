@@ -58,4 +58,39 @@ describe("planExit", () => {
     expect(plan.kind).toBe("nothing");
     expect(plan.notes.length).toBeGreaterThan(0);
   });
+
+  it("skips unregistered tokens, keeps the rest, and says what was left behind", () => {
+    const p = base({
+      supplied: [bal("usdc.near", "10"), bal("token.burrow.near", "5")],
+      collateral: [bal("wrap.near", "7")],
+    });
+    const plan = planExit(p, { skip: new Set(["token.burrow.near"]) });
+    expect(plan.kind).toBe("full");
+    const action = plan.steps[0].tx.actions[0];
+    if (action.type !== "FunctionCall") throw new Error("expected function call");
+    const withdrawn = (action.args as { actions: Record<string, { token_id: string }>[] }).actions
+      .filter((a) => a.Withdraw)
+      .map((a) => a.Withdraw.token_id);
+    expect(withdrawn.sort()).toEqual(["usdc.near", "wrap.near"]);
+    expect(plan.notes.join(" ")).toContain("token.burrow.near");
+    expect(plan.notes.join(" ")).toContain("Register");
+    expect(checkTx(plan.steps[0].tx, BURROW_MANIFEST, "alice.near").ok).toBe(true);
+  });
+
+  it("if every token is unregistered there is nothing to send", () => {
+    const p = base({ supplied: [bal("token.burrow.near", "5")] });
+    const plan = planExit(p, { skip: new Set(["token.burrow.near"]) });
+    expect(plan.kind).toBe("nothing");
+    expect(plan.steps).toHaveLength(0);
+    expect(plan.notes.length).toBeGreaterThan(0);
+  });
+
+  it("with debt, skipped tokens are also left out of the partial exit", () => {
+    const p = base({ supplied: [bal("usdc.near", "10"), bal("token.burrow.near", "5")], collateral: [bal("wrap.near", "7")], borrowed: [bal("usdt.near", "3")] });
+    const plan = planExit(p, { skip: new Set(["token.burrow.near"]) });
+    expect(plan.kind).toBe("partial");
+    const action = plan.steps[0].tx.actions[0];
+    if (action.type !== "FunctionCall") throw new Error("expected function call");
+    expect((action.args as { actions: Record<string, { token_id: string }>[] }).actions.map((a) => a.Withdraw.token_id)).toEqual(["usdc.near"]);
+  });
 });

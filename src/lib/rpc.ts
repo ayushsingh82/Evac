@@ -3,10 +3,13 @@
 
 import type { PinnedBlock, QuorumResult } from "./types";
 
+// Four independent operators. At least two must answer a read and every answer must match. A throttled or
+// unreachable provider is tolerated; rpc.mainnet.near.org in particular is rate-limited under load.
 export const DEFAULT_RPCS = [
-  "https://rpc.mainnet.near.org",
   "https://free.rpc.fastnear.com",
   "https://near.drpc.org",
+  "https://rpc.shitzuapes.xyz",
+  "https://rpc.mainnet.near.org",
 ];
 
 export class QuorumError extends Error {
@@ -50,9 +53,22 @@ interface BlockResult {
   header: { height: number; hash: string };
 }
 
+type Pinned = { block: PinnedBlock; ok: string[]; failed: string[] };
+let pinCache: { at: number; key: string; value: Pinned } | null = null;
+const PIN_TTL_MS = 4000;
+
 /** Pick one block height every responding provider can serve: the lowest "final" height seen. */
-export async function pinBlock(o: RpcOptions = {}): Promise<{ block: PinnedBlock; ok: string[]; failed: string[] }> {
+export async function pinBlock(o: RpcOptions = {}): Promise<Pinned> {
   const rpcs = o.rpcs ?? DEFAULT_RPCS;
+  // Reuse a very recent pin on the real network, so one scan does not re-pin for every read. Tests inject fetch and skip this.
+  const key = rpcs.join(",");
+  if (!o.fetchImpl && pinCache && pinCache.key === key && Date.now() - pinCache.at < PIN_TTL_MS) return pinCache.value;
+  const fresh = await pinFresh(o, rpcs);
+  if (!o.fetchImpl) pinCache = { at: Date.now(), key, value: fresh };
+  return fresh;
+}
+
+async function pinFresh(o: RpcOptions, rpcs: string[]): Promise<Pinned> {
   const settled = await Promise.allSettled(
     rpcs.map((u) => rpcCall<BlockResult>(u, "block", { finality: "final" }, o)),
   );

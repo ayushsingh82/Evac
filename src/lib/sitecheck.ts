@@ -36,6 +36,23 @@ export function normalise(code: string): string {
   return code.replace(/\r\n/g, "\n").replace(/[ \t]+/g, " ").trim();
 }
 
+/**
+ * Inline snippets often carry per-request tokens (for example Cloudflare's bot-detection snippet). Replace long hex
+ * strings, long token-like strings and long numbers with a placeholder so the fingerprint reflects the code's shape,
+ * not the token. Changing the code itself still changes the hash.
+ */
+export function normaliseInline(code: string): string {
+  return (
+    normalise(code)
+      // short-to-medium tokens that mix letters and digits (hex ids, base64 timestamps)
+      .replace(/(?<![\w+/=-])(?=[\w+/=-]*\d)(?=[\w+/=-]*[A-Za-z])[\w+/=-]{12,}(?![\w+/=-])/g, "#")
+      // long hex, long numbers, and very long token-like strings of any kind
+      .replace(/\b[0-9a-fA-F]{12,}\b/g, "#")
+      .replace(/\b\d{8,}\b/g, "#")
+      .replace(/[A-Za-z0-9+/_=-]{32,}/g, "#")
+  );
+}
+
 export function extractScripts(html: string, baseUrl: string): { scripts: ScriptRef[]; flags: string[] } {
   const scripts: ScriptRef[] = [];
   const flags: string[] = [];
@@ -44,6 +61,10 @@ export function extractScripts(html: string, baseUrl: string): { scripts: Script
   while ((m = tag.exec(html))) {
     const attrs = m[1];
     const body = m[2];
+    // JSON data blocks (for example __NEXT_DATA__) are never executed, so they are not part of the fingerprint.
+    const type = /\btype\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(attrs);
+    const t = (type?.[1] ?? type?.[2] ?? type?.[3] ?? "").trim().toLowerCase();
+    if (t && !/^(text|application)\/(x-)?(java|ecma)script$/.test(t) && t !== "module" && t !== "importmap") continue;
     const src = /\bsrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/i.exec(attrs);
     if (src) {
       const raw = src[1] ?? src[2] ?? src[3];
@@ -78,7 +99,7 @@ export async function fingerprintPage(
         flags.push(`Could not fetch ${s.src}.`);
       }
     } else if (s.inline !== undefined) {
-      out[`inline:${inlineN++}`] = await sha256Hex(normalise(s.inline));
+      out[`inline:${inlineN++}`] = await sha256Hex(normaliseInline(s.inline));
     }
   }
   return { v: 1, scripts: out, flags };

@@ -8,17 +8,30 @@ export interface StorageCheck {
   registered: boolean | "unknown";
 }
 
+/** Run async jobs a few at a time, so we are fast without hammering public RPC providers. */
+async function pool<T, R>(items: T[], limit: number, fn: (x: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let next = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (next < items.length) {
+        const i = next++;
+        out[i] = await fn(items[i]);
+      }
+    }),
+  );
+  return out;
+}
+
 export async function checkStorage(accountId: string, tokens: string[], o: RpcOptions = {}): Promise<StorageCheck[]> {
-  const out: StorageCheck[] = [];
-  for (const token of tokens) {
+  return pool(tokens, 4, async (token): Promise<StorageCheck> => {
     try {
       const r = await quorumView<{ total: string } | null>(token, "storage_balance_of", { account_id: accountId }, o);
-      out.push({ token, registered: r.value !== null });
+      return { token, registered: r.value !== null };
     } catch {
-      out.push({ token, registered: "unknown" });
+      return { token, registered: "unknown" };
     }
-  }
-  return out;
+  });
 }
 
 export function storageWarnings(checks: StorageCheck[]): string[] {

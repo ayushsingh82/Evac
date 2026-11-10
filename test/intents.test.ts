@@ -104,3 +104,17 @@ describe("storage pre-check", () => {
     expect(w[0]).toContain("b.near");
   });
 });
+
+describe("storage pre-check runs in parallel but keeps order", () => {
+  it("returns results in the same order as the tokens, even with many tokens", async () => {
+    const toks = Array.from({ length: 11 }, (_, i) => `t${i}.near`);
+    const fakeF = (async (_u: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      if (body.method === "block") return { ok: true, status: 200, json: async () => ({ result: { header: { height: 10, hash: "h" } } }) } as Response;
+      return { ok: true, status: 200, json: async () => ({ result: { result: Array.from(new TextEncoder().encode(JSON.stringify({ total: "1" }))) } }) } as Response;
+    }) as unknown as typeof fetch;
+    const c = await checkStorage("alice.near", toks, { rpcs: ["https://a", "https://b"], fetchImpl: fakeF });
+    expect(c.map((x) => x.token)).toEqual(toks);
+    expect(c.every((x) => x.registered === true)).toBe(true);
+  });
+});

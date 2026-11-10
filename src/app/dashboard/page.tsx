@@ -167,8 +167,15 @@ export default function Dashboard() {
       const acct = account.trim();
       if (!acct) throw new Error("Enter a NEAR account.");
       const { position, quorum } = await scanBurrow(acct);
-      const plan = position ? planExit(position) : null;
-      const storage = plan ? storageWarnings(await checkStorage(acct, withdrawnTokens(plan))) : [];
+      let plan = position ? planExit(position) : null;
+      let storage: string[] = [];
+      if (position && plan) {
+        // Tokens the account isn't registered with would be refunded, so leave them out and say so.
+        const checks = await checkStorage(acct, withdrawnTokens(plan));
+        const unregistered = new Set(checks.filter((c) => c.registered === false).map((c) => c.token));
+        if (unregistered.size) plan = planExit(position, { skip: unregistered });
+        storage = storageWarnings(checks.filter((c) => c.registered !== false));
+      }
       setScan({ position, plan, storage, block: quorum.block.height, providers: quorum.agreed.length, failed: quorum.failed.length });
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
