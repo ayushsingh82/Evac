@@ -15,6 +15,7 @@ import {
 } from "@/lib/intents";
 import type { ExitReport } from "@/lib/verify";
 import { GuardRefusedError, signBridge } from "@/lib/wallet";
+import { IconBridge } from "./icons";
 
 /** Optional last step: send what you recovered to another chain through NEAR Intents. */
 export default function Bridge({ wallet, report }: { wallet: string; report: ExitReport }) {
@@ -47,10 +48,10 @@ export default function Bridge({ wallet, report }: { wallet: string; report: Exi
   const dest = dests.find((d) => d.assetId === destId) ?? dests[0];
   const opt = options[tokenIdx];
 
-  if (loadErr) return <p className="text-sm text-amber-400">Bridge is unavailable right now: {loadErr}</p>;
-  if (!tokens) return <p className="text-sm text-zinc-500">Loading bridge options…</p>;
+  if (loadErr) return <section className="card"><p className="warn small" style={{ margin: 0 }}>Bridge is unavailable right now: {loadErr}</p></section>;
+  if (!tokens) return <section className="card"><p className="muted small" style={{ margin: 0 }}>Loading bridge options…</p></section>;
   if (!options.some((o) => o.asset)) {
-    return <p className="text-sm text-zinc-500">None of the recovered tokens can be bridged through NEAR Intents.</p>;
+    return <section className="card"><p className="muted small" style={{ margin: 0 }}>None of the recovered tokens can be bridged through NEAR Intents.</p></section>;
   }
 
   const input = () => {
@@ -102,17 +103,24 @@ export default function Bridge({ wallet, report }: { wallet: string; report: Exi
   }
 
   return (
-    <div className="flex flex-col gap-3 rounded border border-zinc-800 p-4">
-      <h3 className="font-semibold">Optional: send it to another chain</h3>
-      <div className="flex flex-wrap gap-2 text-sm">
-        <select className="rounded border border-zinc-700 bg-transparent p-2" value={tokenIdx} onChange={(e) => setTokenIdx(Number(e.target.value))}>
+    <section className="card">
+      <div className="card-head">
+        <span className="badge-icon"><IconBridge /></span>
+        <div>
+          <div className="label">Optional</div>
+          <h2>Send it to another chain</h2>
+        </div>
+      </div>
+      <div className="stack">
+      <div className="row">
+        <select style={{ width: "auto" }} value={tokenIdx} onChange={(e) => setTokenIdx(Number(e.target.value))}>
           {options.map((o, i) => (
             <option key={o.token} value={i} disabled={!o.asset} className="text-black">
               {o.token} ({o.amount}){o.asset ? "" : " - not bridgeable"}
             </option>
           ))}
         </select>
-        <select className="rounded border border-zinc-700 bg-transparent p-2" value={dest?.assetId} onChange={(e) => setDestId(e.target.value)}>
+        <select style={{ width: "auto" }} value={dest?.assetId} onChange={(e) => setDestId(e.target.value)}>
           {dests.map((d) => (
             <option key={d.assetId} value={d.assetId} className="text-black">
               USDC on {d.blockchain}
@@ -120,29 +128,30 @@ export default function Bridge({ wallet, report }: { wallet: string; report: Exi
           ))}
         </select>
         <input
-          className="min-w-64 flex-1 rounded border border-zinc-700 bg-transparent p-2 font-mono text-xs"
+          className="mono-input" style={{ flex: 1, minWidth: 240 }}
           placeholder="destination address"
           value={recipient}
           onChange={(e) => setRecipient(e.target.value)}
         />
       </div>
-      <div className="flex gap-2">
-        <button className="rounded bg-zinc-200 px-3 py-1.5 font-semibold text-zinc-900 disabled:opacity-50" disabled={busy} onClick={preview}>
+      <div className="row">
+        <button className="btn ghost" disabled={busy} onClick={preview}>
           Preview
         </button>
-        <button className="rounded bg-emerald-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50" disabled={busy || !quote} onClick={bridge}>
+        <button className="btn primary" disabled={busy || !quote} onClick={bridge}>
           Bridge
         </button>
       </div>
       {quote && (
-        <p className="text-sm">
+        <p className="small" style={{ margin: 0 }}>
           You send {quote.quote.amountInFormatted} (about ${quote.quote.amountInUsd ?? "?"}) and receive about{" "}
           {quote.quote.amountOutFormatted} USDC (at least {quote.quote.minAmountOut} base units). The transfer is checked by the
           Bridge Guard: only that exact amount to the quoted deposit address.
         </p>
       )}
-      {status && <p className="text-sm text-sky-400">{status}</p>}
-      {error && <p className="text-sm text-red-400">{error}</p>}
-    </div>
+      {status && <p className="small" style={{ margin: 0, color: "var(--accent)" }}>{status}</p>}
+      {error && <p className="small bad" style={{ margin: 0 }}>{error}</p>}
+      </div>
+    </section>
   );
 }
