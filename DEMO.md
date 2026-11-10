@@ -7,7 +7,7 @@ Rehearse on a **$5 test position** in a separate account. Record real transactio
 | 0:00 | The protocol's website, where you manage your position | "This is where I manage my DeFi position." |
 | 0:08 | Block the site (add `127.0.0.1 <the site's domain>` to `/etc/hosts`), reload: it fails | "Now the website is down or hijacked." |
 | 0:18 | Open Evac from the local static build (`out/`), banner shows the exit list comes from the registry (or built-in) | "Evac is a static file. No server of ours." |
-| 0:25 | Scan the account: 3 providers agreed at one block | "It reads my position straight from the contracts, three providers must agree." |
+| 0:25 | Scan the account: providers agreed at one block | "It reads my position straight from the contracts, several providers must agree." |
 | 0:35 | Exit plan and the green Guard verdict | "It built the withdrawal itself and its Guard checked every action." |
 | 0:45 | Connect wallet, **Sign and exit** | "Only a plain withdrawal to me can pass." |
 | 0:55 | "Recovered" with per-token before/after | "Recovered means every step succeeded and my balance actually rose." |
