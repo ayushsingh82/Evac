@@ -23,7 +23,7 @@ const PROTOCOLS = [
 ];
 
 const STEPS = [
-  { kind: 2 as const, t: "Scan", d: "Read your position straight from the contracts. Three RPC providers must agree at one pinned block." },
+  { kind: 2 as const, t: "Scan", d: "Read your position straight from the contracts. Four independent RPC providers must agree at one pinned block." },
   { kind: 0 as const, t: "Plan", d: "Build the withdrawal on your machine: free collateral, then withdraw everything, in one call." },
   { kind: 3 as const, t: "Guard", d: "The Exit Guard refuses anything that isn't a plain withdrawal to you. There is no override." },
   { kind: 1 as const, t: "Verify", d: "Sign with your wallet. Evac says Recovered only when every step succeeded and your balance rose." },

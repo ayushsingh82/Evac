@@ -46,7 +46,7 @@ const ALARMS: [string, string, string][] = [
 
 const GLOSSARY: [string, string][] = [
   ["Exit Guard", "The check that every transaction must pass before your wallet sees it. It fails closed."],
-  ["Quorum", "Three RPC providers answer the same read at one pinned block, and must agree."],
+  ["Quorum", "Four independent RPC providers answer the same read at one pinned block. At least two must answer, and every answer must match."],
   ["Receipt", "NEAR runs a transaction as a chain of steps called receipts. Any later one can fail even if the first succeeds."],
   ["Function-call key", "A NEAR access key limited to specific methods on one contract."],
   ["Manifest", "The list of contracts and methods a withdrawal may touch."],
@@ -81,7 +81,7 @@ npx tsx scripts/scan.ts your-account.near`}</Code>
 
           <h2 id="how">How an exit works</h2>
           <ol className="flow">
-            <li><b>Scan.</b> Three NEAR RPC providers answer the same read at one pinned block. They must agree, or Evac stops. One that is down is tolerated.</li>
+            <li><b>Scan.</b> Four independent NEAR RPC providers answer the same read at one pinned block. They must agree, or Evac stops. One that is down is tolerated.</li>
             <li><b>Plan.</b> With no debt, one <code>execute</code> call frees collateral and withdraws everything. With debt, a partial exit of non-collateral deposits.</li>
             <li><b>Guard.</b> The exact transaction is checked before your wallet sees it. The wallet receives a frozen copy of what the Guard approved.</li>
             <li><b>Sign.</b> Through NEAR wallet-selector (MyNearWallet, Meteor, HOT).</li>
@@ -90,13 +90,13 @@ npx tsx scripts/scan.ts your-account.near`}</Code>
           </ol>
 
           <h2 id="architecture">Architecture</h2>
-          <div className="arch" role="img" aria-label="Architecture: browser app reads from three RPC providers, builds a plan, runs the Exit Guard, then the wallet signs.">
+          <div className="arch" role="img" aria-label="Architecture: browser app reads from four RPC providers, builds a plan, runs the Exit Guard, then the wallet signs.">
             <div className="arch-col">
               <div className="arch-box"><b>Evac app</b><span>static files, runs in your browser</span></div>
             </div>
             <div className="arch-arrow">→</div>
             <div className="arch-col">
-              <div className="arch-box"><b>3 NEAR RPC providers</b><span>must agree at one block</span></div>
+              <div className="arch-box"><b>4 NEAR RPC providers</b><span>must agree at one block</span></div>
               <div className="arch-box"><b>Registry contract</b><span>exit list, kit hash, alarm</span></div>
             </div>
             <div className="arch-arrow">→</div>
@@ -203,7 +203,8 @@ npx tsx scripts/watcher.ts --registry <registry> --protocol burrow  # check once
 
           <h2 id="limits">Limits</h2>
           <ul>
-            <li>A real mainnet withdrawal has not been run yet. Wallet signing and the Recovered check are tested with fixtures only.</li>
+            <li>Evac has not yet signed a real withdrawal. It has been checked read-only against 11 real accounts and 18 real historical Burrow transactions (the Guard accepted all 18 and every receipt succeeded), but wallet signing itself is untested.</li>
+            <li>Most real Burrow traffic uses <code>execute_with_pyth</code>. Evac doesn&apos;t build or accept it yet, which is why accounts with a loan only get a partial exit.</li>
             <li>The live Burrow contract differs from its archived source. With an open loan, Burrow may ask for a price check even on a withdraw. If so, the transaction fails safely and Evac says so.</li>
             <li>The registry contract and DAO are written and tested but not deployed yet, so the exit list is built in.</li>
             <li>Only Burrow is supported. Other protocols are planned.</li>

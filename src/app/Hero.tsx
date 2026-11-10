@@ -193,7 +193,7 @@ export default function Hero() {
           <p className="hx-tag">Know your exit
             <br />before you need it</p>
           <dl className="hx-stats">
-            <div><dt>3</dt><dd>RPC providers must agree</dd></div>
+            <div><dt>4</dt><dd>independent RPC providers cross-checked</dd></div>
             <div><dt>21</dt><dd>attack payloads refused in tests</dd></div>
             <div><dt>0</dt><dd>servers of ours in the path</dd></div>
           </dl>
