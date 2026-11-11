@@ -20,7 +20,7 @@ function hashDir(root) {
 
 rmSync("kit", { recursive: true, force: true });
 mkdirSync("kit/evac-kit", { recursive: true });
-cpSync("out", "kit/evac-kit/app", { recursive: true });
+cpSync("out", "kit/evac-kit/app", { recursive: true, filter: (src) => !/(^|\/)out\/download(\/|$)/.test(src.split("\\").join("/")) });
 const digest = hashDir("kit/evac-kit/app");
 const files = walk("kit/evac-kit/app").length;
 writeFileSync("kit/evac-kit/SHA256", digest + "\n");
@@ -62,4 +62,7 @@ because it talks only to NEAR and to your wallet.
 Files: ${files}    Fingerprint: ${digest}
 `);
 execFileSync("tar", ["-czf", "kit/evac-kit.tar.gz", "-C", "kit", "evac-kit"]);
+// Serve the package from the site itself: public/download is copied into the next build.
+mkdirSync("public/download", { recursive: true });
+cpSync("kit/evac-kit.tar.gz", "public/download/evac-kit.tar.gz");
 console.log(`kit/evac-kit.tar.gz  (${files} files)\n${digest}`);

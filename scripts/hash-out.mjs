@@ -14,7 +14,8 @@ function walk(dir) {
   });
 }
 
-const files = walk(root).sort();
+// The downloadable kit itself lives in download/ and is not part of the app it contains.
+const files = walk(root).filter((f) => !relative(root, f).split("\\").join("/").startsWith("download/")).sort();
 const h = createHash("sha256");
 for (const f of files) {
   const rel = relative(root, f).split("\\").join("/");
