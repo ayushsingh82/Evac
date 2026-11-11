@@ -1,0 +1,15 @@
+<!doctype html><meta charset="utf-8"><link rel="stylesheet" href="style.css">
+<main style="max-width:520px">
+<h1>Evac guard settings</h1>
+<div class="card">
+<label for="registry">Registry account</label>
+<input id="registry" placeholder="evac-registry.you.near" spellcheck="false">
+<label for="protocols">Protocols to watch (comma separated)</label>
+<input id="protocols" placeholder="burrow" spellcheck="false">
+<label for="evac">Where Evac runs</label>
+<input id="evac" placeholder="https://your-evac-site/dashboard" spellcheck="false">
+<button id="save">Save</button> <span id="msg" class="muted"></span>
+</div>
+<p class="muted">The extension reads the registry from NEAR through several providers that must agree. Nothing you browse is sent anywhere except the page's own address, to fetch its public scripts for comparison.</p>
+</main>
+<script src="options.js"></script>

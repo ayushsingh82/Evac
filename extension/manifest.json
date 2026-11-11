@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "Evac guard",
+  "version": "0.1.0",
+  "description": "Warns when a DeFi site is a known look-alike or no longer matches what the protocol published, and opens Evac in one click.",
+  "permissions": ["storage", "alarms"],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js", "type": "module" },
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*"], "js": ["content.js"], "run_at": "document_idle" }],
+  "action": { "default_popup": "popup.html", "default_title": "Evac guard" },
+  "options_page": "options.html"
+}
