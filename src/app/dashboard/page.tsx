@@ -19,11 +19,13 @@ import {
   type ExitReport,
   type OutcomeLike,
 } from "@/lib/verify";
+import { tokenLabel } from "@/lib/tokens";
+import { EvacMark } from "../logo";
 import { connectedAccount, disconnect, GuardRefusedError, openConnect, signGuarded } from "@/lib/wallet";
 import Bridge from "../Bridge";
 import { CandyIcon } from "../candy";
 import { Group, ProtocolIcon, Report, Stat, Stepper, Verdict } from "../components";
-import { IconAlert, IconExit, IconInfo, IconLayers, IconSearch, IconShield, IconWallet } from "../icons";
+import { IconAlert, IconCheck, IconExit, IconInfo, IconLayers, IconSearch, IconShield, IconWallet } from "../icons";
 
 type Scan = { position: Position | null; plan: ExitPlan | null; block: number; providers: number; failed: number; storage: string[] };
 type Pending = { account: string; before: Balances; expected: string[] };
@@ -40,6 +42,47 @@ const SAMPLE_BAD = JSON.stringify(
   null,
   2,
 );
+
+const j = (v: unknown) => JSON.stringify(v, null, 2);
+const SAMPLES: { id: string; label: string; hint: string; text: string }[] = [
+  { id: "addkey", label: "Hijacked site adds a key", hint: "Gives an attacker full control of your account.", text: SAMPLE_BAD },
+  {
+    id: "transfer",
+    label: "Hijacked site sends NEAR",
+    hint: "Looks like an approval, moves your NEAR.",
+    text: j({ signerId: "you.near", receiverId: "contract.main.burrow.near", actions: [{ type: "Transfer", deposit: "5000000000000000000000000" }] }),
+  },
+  {
+    id: "lookalike",
+    label: "Look-alike contract",
+    hint: "A name that resembles Burrow but isn't.",
+    text: j({
+      signerId: "you.near",
+      receiverId: "contract.main.burrow.near.evil.near",
+      actions: [{ type: "FunctionCall", methodName: "execute", args: { actions: [{ Withdraw: { token_id: "wrap.near" } }] }, gas: "200000000000000", deposit: "1" }],
+    }),
+  },
+  {
+    id: "borrow",
+    label: "Hidden borrow",
+    hint: "Says withdraw, but opens a loan against you.",
+    text: j({
+      signerId: "you.near",
+      receiverId: "contract.main.burrow.near",
+      actions: [{ type: "FunctionCall", methodName: "execute", args: { actions: [{ Borrow: { token_id: "wrap.near", amount: "1000" } }] }, gas: "200000000000000", deposit: "1" }],
+    }),
+  },
+  {
+    id: "good",
+    label: "A real exit",
+    hint: "What Evac itself builds. This one should pass.",
+    text: j({
+      signerId: "you.near",
+      receiverId: "contract.main.burrow.near",
+      actions: [{ type: "FunctionCall", methodName: "execute", args: { actions: [{ DecreaseCollateral: { token_id: "wrap.near" } }, { Withdraw: { token_id: "wrap.near" } }] }, gas: "200000000000000", deposit: "1" }],
+    }),
+  },
+];
 
 const PROTOCOLS = [
   { id: "burrow", name: "Burrow lending", note: "contract.main.burrow.near", status: "Supported" },
@@ -58,7 +101,7 @@ const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
 const BANNER: Record<Tab, { kind: 0 | 1 | 2 | 3; label: string; title: string; sub: string }> = {
   overview: { kind: 1, label: "Overview", title: "Your exit at a glance", sub: "Everything Evac checks before you ever need the exit." },
   exit: { kind: 0, label: "Exit", title: "Get your money out", sub: "Scan, review the plan, sign. Evac proves the money came back." },
-  check: { kind: 3, label: "Hijack check", title: "Is this transaction safe?", sub: "Paste what a site wants you to sign and see it in plain words." },
+  check: { kind: 3, label: "Hijack check", title: "Is this transaction safe?", sub: "A hijacked site can look perfect. Paste what it wants you to sign and see what it really does." },
   registry: { kind: 2, label: "Registry and watcher", title: "What the protocol published", sub: "Exit list, release hash, site fingerprint and the alarm." },
 };
 
@@ -215,7 +258,7 @@ export default function Dashboard() {
   function checkPasted() {
     try {
       const tx = JSON.parse(txText) as NearTx;
-      setTxVerdict(checkTx(tx, manifest, tx.signerId));
+      setTxVerdict(checkTx(tx, manifest, wallet ?? tx.signerId));
     } catch {
       setTxVerdict({ ok: false, reasons: ["That is not a readable transaction, so it is refused."], explain: [] });
     }
@@ -229,26 +272,8 @@ export default function Dashboard() {
   return (
     <div className="dash">
       <aside className="side">
-        <Link href="/" className="side-brand">evac</Link>
+        <Link href="/" className="side-brand"><EvacMark />evac</Link>
 
-        <div className="side-acct">
-          {wallet ? (
-            <>
-              <span className="avatar">{wallet[0]?.toUpperCase()}</span>
-              <div className="side-acct-t">
-                <b title={wallet}>{short(wallet)}</b>
-                <span>Wallet connected</span>
-              </div>
-              <button className="side-x" aria-label="Disconnect wallet" title="Disconnect" onClick={() => disconnect().then(() => setWallet(null))}>
-                ✕
-              </button>
-            </>
-          ) : (
-            <button className="dbtn solid wide" onClick={() => openConnect()}>
-              <IconWallet /> Connect wallet
-            </button>
-          )}
-        </div>
 
         <div className="side-sec">Workspace</div>
         <nav className="side-nav" aria-label="Dashboard sections">
@@ -475,6 +500,12 @@ export default function Dashboard() {
                   Scan
                 </button>
               </div>
+              <p className="muted small" style={{ margin: "10px 0 0" }}>
+                Only reads. Nothing is sent until you press Sign and exit. Try an example:{" "}
+                {["zavodil.near", "mob.near", "sm96.near"].map((a) => (
+                  <button key={a} type="button" className="eg-chip" disabled={busy} onClick={() => setAccount(a)}>{a}</button>
+                ))}
+              </p>
               {status && <p className="small" style={{ margin: "12px 0 0", color: "var(--accent)" }}>{status}</p>}
               {error && (
                 <div className="notice bad-notice" style={{ marginTop: 12 }} role="alert">
@@ -500,6 +531,13 @@ export default function Dashboard() {
                     <h2>Your position</h2>
                   </div>
                 </div>
+                {scan.position && (
+                  <div className="stats" style={{ margin: "4px 0 14px" }}>
+                    <Stat label="Supplied" value={scan.position.supplied.length} sub="tokens" />
+                    <Stat label="Collateral" value={scan.position.collateral.length} sub="tokens" />
+                    <Stat label="Borrowed" value={scan.position.borrowed.length} tone={scan.position.borrowed.length ? "warn" : "ok"} sub={scan.position.borrowed.length ? "open loan" : "no loan"} />
+                  </div>
+                )}
                 <p className="muted small">
                   Read at block {scan.block}. {scan.providers} RPC providers agreed{scan.failed ? `, ${scan.failed} unavailable` : ""}.
                 </p>
@@ -512,9 +550,15 @@ export default function Dashboard() {
                     <Group title="Borrowed" rows={scan.position.borrowed} />
 
                     {scan.plan && (
-                      <div className="stack" style={{ marginTop: 20 }}>
-                        <div className="row">
-                          <h3>Exit plan</h3>
+                      <div className="plan" data-kind={scan.plan.kind}>
+                        <div className="plan-head">
+                          <span className="plan-ic"><IconExit /></span>
+                          <div>
+                            <div className="label">Step 3</div>
+                            <h3 style={{ margin: 0 }}>
+                              {scan.plan.kind === "full" ? "Full exit is ready" : scan.plan.kind === "partial" ? "Partial exit is ready" : "Nothing to withdraw"}
+                            </h3>
+                          </div>
                           <span className={`chip ${scan.plan.kind === "full" ? "ok-chip" : "warn-chip"}`}>{scan.plan.kind}</span>
                         </div>
                         {scan.plan.notes.map((n, i) => (
@@ -529,22 +573,33 @@ export default function Dashboard() {
                             <span>{n}</span>
                           </div>
                         ))}
-                        {scan.plan.steps.map((s, i) => (
-                          <div key={i} className="stack">
-                            <p style={{ margin: 0, fontWeight: 650 }}>{s.title}</p>
-                            <Verdict v={checkTx(s.tx, manifest, scan.position!.accountId)} />
-                            <div className="row">
-                              <button className="btn primary" disabled={busy || !mine} onClick={() => exitNow(s, scan.plan!)}>
-                                <IconExit /> Sign and exit
+                        {scan.plan.steps.map((s, i) => {
+                          const verdict = checkTx(s.tx, manifest, scan.position!.accountId);
+                          return (
+                            <div key={i} className="stack">
+                              <p style={{ margin: 0, fontWeight: 650 }}>{s.title}</p>
+                              {verdict.ok && (
+                                <ol className="plan-steps">
+                                  {verdict.explain.map((t, j) => (
+                                    <li key={j}>{t.replace(/(\S+\.\S+|usn)(?= \(| *$)/, (m) => tokenLabel(m))}</li>
+                                  ))}
+                                </ol>
+                              )}
+                              <Verdict v={verdict} />
+                              <button className="btn lime plan-cta" disabled={busy || !mine || !verdict.ok} onClick={() => exitNow(s, scan.plan!)}>
+                                <IconExit /> {busy ? "Working…" : "Sign and exit"}
                               </button>
                               {!mine && (
-                                <span className="muted small">
-                                  {wallet ? "Your connected wallet is a different account than the one scanned." : "Connect the wallet that owns this account to sign."}
-                                </span>
+                                <div className="plan-hint">
+                                  {wallet
+                                    ? "Your connected wallet is a different account than the one scanned."
+                                    : "Connect the wallet that owns this account (top right) to sign."}
+                                </div>
                               )}
+                              {mine && <div className="plan-hint">Your wallet will ask you to approve. Evac never holds your keys.</div>}
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     )}
                   </>
@@ -555,19 +610,72 @@ export default function Dashboard() {
         )}
 
         {tab === "check" && (
-          <section className="card">
-            <p className="muted">
-              Paste the transaction a site is asking you to sign. The sample is what a hijacked frontend might try: adding itself a
-              full-access key to your account.
-            </p>
-            <textarea className="mono-input" value={txText} onChange={(e) => setTxText(e.target.value)} aria-label="Transaction JSON" />
-            <div className="row" style={{ margin: "12px 0" }}>
-              <button className="btn primary" onClick={checkPasted}>
-                <IconShield /> Check it
-              </button>
-            </div>
-            {txVerdict && <Verdict v={txVerdict} />}
-          </section>
+          <>
+            <section className="card">
+              <div className="card-head">
+                <span className="badge-icon"><IconShield /></span>
+                <div>
+                  <div className="label">Why this exists</div>
+                  <h2>The website can lie. The transaction can&apos;t.</h2>
+                </div>
+              </div>
+              <p className="muted" style={{ margin: 0 }}>
+                When a website is hijacked, it looks exactly like the real one. What it asks your wallet to sign is the only thing that
+                matters. Paste it here and Evac reads it the way your wallet won&apos;t, and tells you in plain words whether it is a
+                withdrawal to you or something else. It runs in your browser and sends nothing anywhere.
+              </p>
+            </section>
+
+            <section className="card">
+              <div className="label">Try an example</div>
+              <div className="eg-grid">
+                {SAMPLES.map((x) => (
+                  <button
+                    key={x.id}
+                    type="button"
+                    className={`eg-card ${txText === x.text ? "on" : ""}`}
+                    onClick={() => {
+                      setTxText(x.text);
+                      setTxVerdict(null);
+                    }}
+                  >
+                    <b>{x.label}</b>
+                    <span>{x.hint}</span>
+                  </button>
+                ))}
+              </div>
+              <div className="label" style={{ marginTop: 18 }}>Transaction (JSON)</div>
+              <textarea className="mono-input" value={txText} onChange={(e) => { setTxText(e.target.value); setTxVerdict(null); }} aria-label="Transaction JSON" spellCheck={false} />
+              <div className="row" style={{ margin: "12px 0 0" }}>
+                <button className="btn primary" onClick={checkPasted}>
+                  <IconShield /> Check it
+                </button>
+                <span className="muted small">Checked against the exit list for {manifest.protocol}.</span>
+              </div>
+            </section>
+
+            {txVerdict && (
+              <section className={`card verdict-card ${txVerdict.ok ? "vc-ok" : "vc-bad"}`} role="status">
+                <div className="vc-head">
+                  <span className="vc-ic">{txVerdict.ok ? <IconCheck /> : <IconAlert />}</span>
+                  <div>
+                    <h2 style={{ margin: 0 }}>{txVerdict.ok ? "Looks like a plain withdrawal to you" : "Do not sign this"}</h2>
+                    <p className="muted" style={{ margin: "4px 0 0" }}>
+                      {txVerdict.ok
+                        ? "It only calls an allowed withdrawal on the protocol's contract, with exactly 1 yoctoNEAR attached."
+                        : `${txVerdict.reasons.length} problem${txVerdict.reasons.length === 1 ? "" : "s"} found. If a website is asking for this, treat the site as hijacked.`}
+                    </p>
+                  </div>
+                </div>
+                <ul className="vc-list">
+                  {(txVerdict.ok ? txVerdict.explain : txVerdict.reasons).map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+                {!txVerdict.ok && <p className="vc-next">What to do: close the site, don&apos;t approve anything, and use the Exit tab to withdraw straight from the contracts.</p>}
+              </section>
+            )}
+          </>
         )}
 
         {tab === "registry" && (

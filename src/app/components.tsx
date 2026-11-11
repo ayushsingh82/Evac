@@ -1,4 +1,5 @@
 // Shared presentational pieces for the landing page and the dashboard.
+import { formatAmount, isKnownToken, tokenLabel } from "@/lib/tokens";
 import type { ReactNode } from "react";
 import type { GuardVerdict } from "@/lib/types";
 import type { ExitReport } from "@/lib/verify";
@@ -75,8 +76,14 @@ export function Group({ title, rows }: { title: string; rows: { token_id: string
           <tbody>
             {rows.map((r) => (
               <tr key={r.token_id}>
-                <td className="mono">{r.token_id}</td>
-                <td className="mono amt">{r.balance}</td>
+                <td>
+                  <b>{tokenLabel(r.token_id)}</b>
+                  <div className="muted small mono" style={{ wordBreak: "break-all" }}>{r.token_id}</div>
+                </td>
+                <td className="mono amt" title={`${r.balance} (raw)`}>
+                  {formatAmount(r.token_id, r.balance)}
+                  {!isKnownToken(r.token_id) && <div className="muted small">raw units</div>}
+                </td>
               </tr>
             ))}
           </tbody>
