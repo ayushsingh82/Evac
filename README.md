@@ -10,6 +10,8 @@
 </p>
 
 <p align="center">
+  <a href="https://getevac.vercel.app"><b>Live site</b></a> ·
+  <a href="https://getevac.vercel.app/dashboard"><b>Open the exit</b></a> ·
   <a href="FLOW.md">How it flows</a> ·
   <a href="DEMO.md">Demo plan</a> ·
   <a href="DEPLOY.md">Deploy</a> ·

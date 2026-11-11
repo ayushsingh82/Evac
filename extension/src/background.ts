@@ -11,7 +11,7 @@ export interface Config {
   /** Optional JSON ([{protocol, entry}]) used instead of the registry. For demos and trying the extension without a deployed registry. */
   demo: string;
 }
-const DEFAULTS: Config = { registry: "", protocols: ["burrow"], evacUrl: "http://localhost:3001/dashboard", demo: "" };
+const DEFAULTS: Config = { registry: "", protocols: ["burrow"], evacUrl: "https://getevac.vercel.app/dashboard", demo: "" };
 const STALE_MS = 5 * 60_000;
 
 async function getConfig(): Promise<Config> {

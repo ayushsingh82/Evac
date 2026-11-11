@@ -4,7 +4,7 @@ chrome.storage.local.get("config").then((s: { config?: { registry: string; proto
   const c = s.config;
   $("registry").value = c?.registry ?? "";
   $("protocols").value = (c?.protocols ?? ["burrow"]).join(", ");
-  $("evac").value = c?.evacUrl ?? "http://localhost:3001/dashboard";
+  $("evac").value = c?.evacUrl ?? "https://getevac.vercel.app/dashboard";
   $("demo").value = (c as { demo?: string } | undefined)?.demo ?? "";
 });
 $("save").addEventListener("click", () => {
