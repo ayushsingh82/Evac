@@ -9,6 +9,7 @@
     "lint": "eslint",
     "kit": "next build && node scripts/make-kit.mjs",
     "extension": "node scripts/build-extension.mjs",
+    "demo:sites": "tsx scripts/demo-sites.mts",
     "test": "vitest run"
   },
   "dependencies": {

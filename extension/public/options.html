@@ -8,6 +8,8 @@
 <input id="protocols" placeholder="burrow" spellcheck="false">
 <label for="evac">Where Evac runs</label>
 <input id="evac" placeholder="https://your-evac-site/dashboard" spellcheck="false">
+<label for="demo">Demo data (optional)</label>
+<textarea id="demo" rows="5" spellcheck="false" placeholder="Leave empty to use the registry. For demos: paste the JSON printed by npm run demo:sites"></textarea>
 <button id="save">Save</button> <span id="msg" class="muted"></span>
 </div>
 <p class="muted">The extension reads the registry from NEAR through several providers that must agree. Nothing you browse is sent anywhere except the page's own address, to fetch its public scripts for comparison.</p>

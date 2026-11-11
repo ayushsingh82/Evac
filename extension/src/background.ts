@@ -8,8 +8,10 @@ export interface Config {
   registry: string;
   protocols: string[];
   evacUrl: string;
+  /** Optional JSON ([{protocol, entry}]) used instead of the registry. For demos and trying the extension without a deployed registry. */
+  demo: string;
 }
-const DEFAULTS: Config = { registry: "", protocols: ["burrow"], evacUrl: "http://localhost:3001/dashboard" };
+const DEFAULTS: Config = { registry: "", protocols: ["burrow"], evacUrl: "http://localhost:3001/dashboard", demo: "" };
 const STALE_MS = 5 * 60_000;
 
 async function getConfig(): Promise<Config> {
@@ -20,6 +22,15 @@ async function getConfig(): Promise<Config> {
 async function refresh(force = false): Promise<{ tracked: Tracked[]; at: number; error: string }> {
   const s = await chrome.storage.local.get("cache");
   const cfg = await getConfig();
+  if (cfg.demo.trim()) {
+    try {
+      const tracked = JSON.parse(cfg.demo) as Tracked[];
+      if (!Array.isArray(tracked)) throw new Error("not a list");
+      return { tracked, at: Date.now(), error: "" };
+    } catch {
+      return { tracked: [], at: 0, error: "The demo data is not valid JSON." };
+    }
+  }
   const c = s.cache as { tracked: Tracked[]; at: number; key: string } | undefined;
   const key = cfg.registry + "|" + cfg.protocols.join(",");
   if (!force && c && c.key === key && Date.now() - c.at < STALE_MS) return { tracked: c.tracked, at: c.at, error: "" };

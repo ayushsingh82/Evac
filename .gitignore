@@ -43,3 +43,5 @@ next-env.d.ts
 # kit and extension build output
 /kit/
 /extension/dist/
+/public/download/
+/extension/demo-data.json
