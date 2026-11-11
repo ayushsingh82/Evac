@@ -82,7 +82,8 @@ Read-only, on 10 Nov 2026. Nothing was signed or sent.
   protocol publishes in its registry.
 - **Chrome extension.** `npm run extension` builds `extension/dist` (load it unpacked). It reads the registry and warns on
   look-alike addresses, on the official site when a script changed or a new origin appeared, and when the protocol has raised an
-  alarm. It warns only; the Exit Guard still decides what can be signed. Tested in a real Chrome against local pages
+  alarm. It warns only; the Exit Guard still decides what can be signed. `npm run demo:sites` serves local demo pages and prints
+  demo data, so it can be shown without a deployed registry. Tested in a real Chrome against local pages
   (`scripts/e2e-extension.mts`: 8 of 8). The registry isn't deployed yet, so on mainnet it has nothing to compare with until it is.
 
 ## Run

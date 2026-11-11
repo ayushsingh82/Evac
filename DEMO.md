@@ -12,11 +12,15 @@ Rehearse on a **$5 test position** in a separate account. Record real transactio
 | 0:45 | Connect wallet, **Sign and exit** | "Only a plain withdrawal to me can pass." |
 | 0:55 | "Recovered" with per-token before/after | "Recovered means every step succeeded and my balance actually rose." |
 | 1:05 | Paste the sample malicious transaction (AddKey): REFUSED | "A hijacked site would try to add its own key. Refused." |
+| 1:10 | Extension: open `/extension`, then the local demo pages (`npm run demo:sites`): clean page stays quiet, tampered page and look-alike get a red banner | "The extension warns on the page itself, before I sign anything." |
 | 1:15 | Optional: preview a bridge to USDC on Base | "And I can leave the chain through NEAR Intents." |
-| 1:25 | Repo, tests (88 + 15), registry contract, function-call keys | "The registry's keys are NEAR function-call keys, so a stolen key cannot change the release." |
+| 1:25 | Repo, tests (111 + 15), registry contract, function-call keys | "The registry's keys are NEAR function-call keys, so a stolen key cannot change the release." |
 
 Post on X: video, one sentence on the problem (the website is the weak point of "decentralized" DeFi), one on how it works,
 tag @NEARProtocol and #NEARHackathon, and say it was built at NEAR HACKATHON.
+
+Before recording the extension part: `npm run extension`, load `extension/dist` in Chrome, run `npm run demo:sites`, paste the
+printed JSON into the extension's Settings under Demo data. Say it is demo data standing in for the registry.
 
 Honesty checklist before recording: only show features you ran. If the registry is not deployed, say the exit list is
 built in and show the contract's tests instead.
