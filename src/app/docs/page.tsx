@@ -8,14 +8,19 @@ const TOC: TocGroup[] = [
   { title: "Getting started", items: [{ id: "quickstart", label: "Quick start" }, { id: "how", label: "How an exit works" }] },
   { title: "Concepts", items: [{ id: "architecture", label: "Architecture" }, { id: "guard", label: "The Exit Guard" }] },
   {
+    title: "Tools",
+    items: [
+      { id: "kit", label: "Save the kit" },
+      { id: "extension", label: "Browser extension" },
+      { id: "bridge", label: "Bridge out" },
+    ],
+  },
+  {
     title: "Operate",
     items: [
       { id: "verify", label: "Verify the kit" },
       { id: "registry", label: "Registry and keys" },
       { id: "watcher", label: "The watcher" },
-      { id: "bridge", label: "Bridge out" },
-      { id: "kit", label: "Save the kit" },
-      { id: "extension", label: "Browser extension" },
     ],
   },
   { title: "Help", items: [{ id: "trouble", label: "Troubleshooting" }, { id: "limits", label: "Limits" }, { id: "glossary", label: "Glossary" }] },

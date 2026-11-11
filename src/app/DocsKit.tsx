@@ -4,11 +4,13 @@ import { useEffect, useState } from "react";
 
 export type TocGroup = { title: string; items: { id: string; label: string }[] };
 
-/** Docs sidebar: grouped sections, a filter box, and the section being read highlighted. */
+/** Docs sidebar: reading progress, collapsible groups, a filter box, and the section being read highlighted. */
 export function DocsToc({ groups }: { groups: TocGroup[] }) {
   const flat = groups.flatMap((g) => g.items);
   const [active, setActive] = useState(flat[0]?.id);
   const [q, setQ] = useState("");
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState(0);
   useEffect(() => {
     // The active section is the last heading that has scrolled past a line near the top of the screen.
     let raf = 0;
@@ -20,6 +22,8 @@ export function DocsToc({ groups }: { groups: TocGroup[] }) {
         if (el && el.getBoundingClientRect().top < 140) cur = i.id;
       }
       setActive(cur);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      setProgress(max > 0 ? Math.min(1, Math.max(0, window.scrollY / max)) : 0);
     };
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(update);
@@ -33,28 +37,45 @@ export function DocsToc({ groups }: { groups: TocGroup[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   const term = q.trim().toLowerCase();
+  const shown = groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !term || i.label.toLowerCase().includes(term)) }))
+    .filter((g) => g.items.length);
+  const activeIdx = Math.max(0, flat.findIndex((i) => i.id === active));
   return (
     <aside className="doc-side">
+      <div className="doc-head">
+        <b>Documentation</b>
+        <span>{activeIdx + 1} of {flat.length}</span>
+      </div>
+      <div className="doc-prog" aria-hidden><i style={{ width: `${Math.round(progress * 100)}%` }} /></div>
       <div className="doc-search">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter sections" aria-label="Filter sections" />
+        {q && <button type="button" className="doc-clear" aria-label="Clear filter" onClick={() => setQ("")}>✕</button>}
       </div>
-      {groups.map((g) => {
-        const items = g.items.filter((i) => !term || i.label.toLowerCase().includes(term));
-        if (!items.length) return null;
+      {shown.length === 0 && <p className="doc-none">No section matches &ldquo;{q}&rdquo;.</p>}
+      {shown.map((g) => {
+        const open = term ? true : !closed[g.title];
         return (
           <div className="toc-g" key={g.title}>
-            <div className="side-sec">{g.title}</div>
-            {items.map((i) => (
-              <a key={i.id} href={`#${i.id}`} className={active === i.id ? "on" : ""}>
-                {i.label}
-              </a>
-            ))}
+            <button type="button" className="toc-h" aria-expanded={open} onClick={() => setClosed((c) => ({ ...c, [g.title]: open }))}>
+              <span>{g.title}</span>
+              <i className={open ? "open" : ""} aria-hidden>›</i>
+            </button>
+            {open &&
+              g.items.map((i) => (
+                <a key={i.id} href={`#${i.id}`} className={active === i.id ? "on" : ""}>
+                  {i.label}
+                </a>
+              ))}
           </div>
         );
       })}
       <div className="doc-side-foot">
         <a href="/dashboard" className="dbtn solid wide">Open Evac</a>
-        <a href="https://github.com/ayushsingh82/Evac" className="doc-ext">GitHub ↗</a>
+        <div className="doc-links">
+          <a href="/kit">Save the kit</a>
+          <a href="/extension">Extension</a>
+        </div>
       </div>
     </aside>
   );
