@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "kit": "next build && node scripts/make-kit.mjs",
+    "extension": "node scripts/build-extension.mjs",
     "test": "vitest run"
   },
   "dependencies": {

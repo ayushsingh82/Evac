@@ -12,6 +12,8 @@ export function SiteNav() {
       <div className="sn-links">
         <Link href="/#how">How it works</Link>
         <Link href="/#protocols">Protocols</Link>
+        <Link href="/kit">Save the kit</Link>
+        <Link href="/extension">Extension</Link>
         <Link href="/docs">Docs</Link>
         <Link href="/dashboard" className="hx-join sn-btn">Open Evac</Link>
       </div>
@@ -28,13 +30,15 @@ export function SiteFooter() {
             <EvacMark />
             evac
           </Link>
-          <p>A fire exit for NEAR DeFi. When the website is hijacked or gone, your money is still in the contracts. Evac is the way out that never goes through the front door.</p>
+          <p>A fire exit for NEAR DeFi. Website hijacked or gone? Your funds are still on chain.</p>
         </div>
         <div>
           <h4>Product</h4>
           <Link href="/dashboard">Open Evac</Link>
           <Link href="/#how">How it works</Link>
           <Link href="/#protocols">Protocols</Link>
+          <Link href="/kit">Save the kit</Link>
+          <Link href="/extension">Browser extension</Link>
         </div>
         <div>
           <h4>Learn</h4>
