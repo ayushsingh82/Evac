@@ -1,119 +1,119 @@
-<p><img src="public/evac-mark.svg" alt="" width="56" height="56" /></p>
+<p align="center">
+  <img src="public/evac-logo.svg" width="96" height="96" alt="Evac logo">
+</p>
 
-# Evac
+<h1 align="center">Evac</h1>
 
-**A fire exit for NEAR DeFi.** The website is hijacked or gone, but your money is still in the contracts. Evac is the way out that never goes through the front door.
-Evac reads your position straight from the contracts, builds the withdrawal on your machine, refuses anything that is
-not a plain withdrawal to you, and tells you honestly whether the money really came back.
+<p align="center">
+  <b>A fire exit for NEAR DeFi.</b><br>
+  Website hijacked or gone? Your funds are still on chain. Evac gets them out, safely.
+</p>
 
-Built for the NEAR Hackathon. Tracks: Unstoppable DeFi, AI Security & Defense, Open Innovation.
-Design notes: [docs/architecture.md](docs/architecture.md) (the original plan; this README says what was actually built).
+<p align="center">
+  <a href="FLOW.md">How it flows</a> ·
+  <a href="DEMO.md">Demo plan</a> ·
+  <a href="DEPLOY.md">Deploy</a> ·
+  <a href="SUBMISSION.md">Submission text</a>
+</p>
+
+<p align="center">
+  <img alt="Tests" src="https://img.shields.io/badge/tests-111%20%2B%2015%20passing-c4fa4f?labelColor=141615">
+  <img alt="Network" src="https://img.shields.io/badge/NEAR-mainnet-c4fa4f?labelColor=141615">
+  <img alt="Built for" src="https://img.shields.io/badge/NEAR%20Hackathon-2026-c4fa4f?labelColor=141615">
+</p>
+
+## The problem
+
+When a DeFi website is hijacked or goes offline, nothing is wrong with the contracts. People sign on a perfect copy of the
+site and approve a drainer, or find the site gone and can't reach their money. The usual fallback, a block explorer's
+"write contract" page, is just another website.
+
+Evac is a way out that never goes through the front door.
 
 ## How it works
 
 ```mermaid
 flowchart LR
-    A["Scan<br/>4 RPC providers agree<br/>at one block"] --> B["Plan<br/>free collateral,<br/>withdraw all"]
-    B --> C["Exit Guard<br/>only a plain withdrawal<br/>to you passes"]
+    A["Scan<br/>4 providers agree<br/>at one block"] --> B["Plan<br/>repay if needed,<br/>free collateral,<br/>withdraw all"]
+    B --> C["Exit Guard<br/>only a plain<br/>withdrawal to you"]
     C --> D["Sign<br/>your wallet,<br/>frozen copy"]
     D --> E["Verify<br/>every receipt ok<br/>AND balance rose"]
     E --> F["Bridge out<br/>optional, USDC on<br/>another chain"]
 ```
 
-1. **Scan.** Reads your Burrow lending position (`contract.main.burrow.near`) from four independent NEAR RPC providers at one pinned
-   block. One dead provider is tolerated; providers that disagree stop the read.
-2. **Plan.** One `execute` call: free collateral, then withdraw everything. Tokens your account isn't registered with are left
-   out (their withdrawal would be refunded) and the plan says so. With an open loan, if your other deposits can repay it (plus 1% for interest), the plan repays the
-   loan and then exits fully through Burrow's price-checked `execute_with_pyth`; otherwise you get a partial exit and are told
-   what is missing.
-3. **Guard.** The **Exit Guard** checks the exact transaction before the wallet sees it. It refuses `AddKey`, `Transfer`,
-   `DeleteAccount`, unknown contracts or methods, any deposit other than exactly 1 yoctoNEAR, extra fields, and anything it
-   cannot decode. There is no override. A 21-payload attack corpus is in the tests.
-4. **Sign.** NEAR wallet-selector (MyNearWallet, Meteor, HOT). The wallet receives a frozen copy of what the Guard approved.
-5. **Verify.** "Recovered" shows only if **every receipt** succeeded **and** each token balance rose. On NEAR the first
-   receipt can succeed while the token transfer fails and the protocol refunds the deposit.
-6. **Bridge out (optional).** Send what you recovered to USDC on Base, Ethereum, Arbitrum or Solana through NEAR Intents'
-   1Click API. A separate Bridge Guard accepts only the exact quoted transfer to the quoted deposit address.
+Full flow, failure branches and a code map: **[FLOW.md](FLOW.md)**.
 
-Behind it, a **registry contract** (owned by a DAO) publishes the kit hash, exit list, site fingerprint and alarm, and a
-**watcher** fingerprints the live site and raises `Compromised` on changed or injected scripts. The website key and the watcher
-key are NEAR function-call keys that can each call only their own methods. You can also paste any transaction from a site you
-distrust and Evac tells you whether it is a safe exit.
+## What's built
 
-No server of ours is in the path: the app is a static export, and the build is reproducible
-(`npm run build && node scripts/hash-out.mjs` gives the same hash every time).
+| | Feature | What it does |
+|---|---|---|
+| **Exit** | Position scan | Reads your Burrow position straight from the contract through four RPC providers at one pinned block. One may be down; if they disagree, Evac stops |
+| | Exit plan | No loan: free collateral and withdraw everything in one call. Loan: if your other deposits cover it (plus 1% for interest), repay then exit fully; otherwise a partial exit that says what is missing |
+| | Storage check | Leaves out tokens your account isn't registered with, since their withdrawal would be refunded, and says so |
+| **Safety** | Exit Guard | Fail-closed. Refuses `AddKey`, transfers, account deletion, unknown contracts or methods, any deposit but 1 yocto, and anything it can't decode. No override. 21-payload attack corpus in the tests |
+| | Recovered check | "Recovered" only if every receipt succeeded and each balance rose. On NEAR the first step can succeed while a later transfer fails |
+| | Check a transaction | Paste anything a site asks you to sign and see in plain words whether it's a safe withdrawal |
+| **Leave** | Bridge out | Optional swap to USDC on Base, Ethereum, Arbitrum or Solana through NEAR Intents (1Click), with its own guard |
+| | Wallets | MyNearWallet, Meteor and HOT through wallet-selector; redirect wallets resume the check on return |
+| **Trust** | Registry contract | Rust, DAO-owned. Publishes the kit hash, exit list, site fingerprint, alarm and look-alike blocklist. Its website and watcher keys are NEAR function-call keys that can each call only their own methods |
+| | Watcher | Fingerprints the live site and raises `Compromised` on a swapped or injected script |
+| **Carry** | Exit kit | `npm run kit` packs the app into one file with a stand-alone `verify.mjs`. `MATCH` or `MISMATCH` against the published hash |
+| | Browser extension | Chrome extension that warns on look-alike sites, changed scripts and protocol alarms. Includes local demo pages |
+| | Reproducible build | Same source, same hash, every time. No server of ours in the path |
 
-**Full flow, failure branches and a code map: [FLOW.md](FLOW.md).**
+## Proof
 
-## Status
+Everything below was run read-only on live NEAR data, or in tests. Each row has a command.
 
-| Piece | State |
-|---|---|
-| RPC quorum at a pinned block | done, tested, run against mainnet |
-| Burrow scan + exit plan | done; live scan of a real account works |
-| Exit Guard + attack corpus | done (21 payloads refused, real exit accepted) |
-| Wallet signing (`wallet-selector`) | done; **not yet tried with a real wallet** |
-| Tested on real mainnet data (read-only) | 11 real Burrow accounts scanned and planned; 18 real historical `execute` transactions replayed through the Guard (all accepted) and the receipt checker (all clean). See below |
-| Receipt + balance "Recovered" check | done, tested on fixtures; **not yet run on a real exit** |
-| Registry contract (Rust) | done, 15 unit tests, wasm builds; **not deployed** |
-| Registry client + manifest comparison | done, tested with fakes; needs a deployed registry to run for real |
-| Watcher | done; fingerprinting tested against a real DeFi site (app.rhea.finance, used only as a test target); publishing needs a deployed registry |
-| 1Click bridge-out + Bridge Guard | done; dry quote verified live; **real bridge not run** |
-| Storage-registration pre-check | done, tested |
-| Reproducible build + hash tools | done |
+| What we tried | Result | Command |
+|---|---|---|
+| 11 real Burrow accounts (no loan, loan, supplied only, missing) | All scanned, planned and Guard-approved | `npx tsx scripts/scan.ts zavodil.near` |
+| 18 real past Burrow transactions replayed | 18 of 18 accepted, receipts clean | `npx vitest run test/hijack-corpus.test.ts` |
+| Hijack payloads against the Guard | All refused, the real exit passes | `npx vitest run test/guard.test.ts` |
+| A provider lies or goes quiet | Read continues safely or stops | `npx vitest run test/rpc.test.ts` |
+| A transfer fails behind a success | Not marked recovered | `npx vitest run test/verify.test.ts` |
+| A real site gets a swapped script | Flagged | `npx tsx scripts/watcher.ts --url <site> --baseline` |
+| Extension in a real Chrome (clean, tampered, look-alike, both alarms) | 8 of 8 | `npm i --no-save puppeteer-core && npx tsx scripts/e2e-extension.mts` |
+| A registry key steps outside its role | Rejected | `cd contracts/registry && cargo test` |
+| Build twice | Same hash | `npm run build && node scripts/hash-out.mjs` |
 
-**Not verified on mainnet:** a real withdrawal, and especially the repay-and-exit path for accounts with a loan (it uses
-`execute_with_pyth`, built from the shape of real past calls). The live Burrow contract differs from its archived source, so
-the first real exit with a small position is the key test. If a transaction fails, nothing moves and the Recovered check says so.
+## Not proven yet
 
-## Tested against real mainnet data
+Said plainly, so nobody is surprised:
 
-Read-only, on 10 Nov 2026. Nothing was signed or sent.
+- A **real withdrawal signed with a real wallet**. Wallet signing and the live "Recovered" check are tested on fixtures and historical receipts only.
+- The **repay-and-exit** path for accounts with a loan (uses Burrow's `execute_with_pyth`). Built from the shape of real past calls, covered by tests, not tried with real money.
+- A **real bridge swap** (only a dry quote was run).
+- The **registry, DAO and watcher publishing** on mainnet. Written and tested, not deployed.
+- Only Burrow is supported. Ref and liquid staking are planned.
 
-- **11 real accounts** of every kind (no debt with collateral, supplied only, with open loans, one that doesn't exist). Each was scanned through the 3-provider quorum, planned, and checked by the Guard. Every plan was accepted by the Guard. Accounts with loans got the partial plan.
-- **18 real historical `execute` transactions** by real users (10 withdrawals, 8 repayments), found by scanning about 2,800 recent transactions on the Burrow contract. The Guard accepted all 18, and the receipt checker found every receipt successful.
-- **Findings that changed the code:** scans were slow because storage checks ran one at a time (81 s down to about 4 s); several real accounts aren't registered with `token.burrow.near`, so that one withdrawal would be refunded, so Evac now leaves unregistered tokens out of the plan and says so; and the site fingerprint raised a false alarm on a real site because of a per-request token in Cloudflare's snippet, so volatile tokens and JSON data blocks are now ignored.
-- **What the real traffic shows:** most user transactions on Burrow today use `execute_with_pyth`, not `execute`. Evac now builds and accepts `execute_with_pyth` (same actions, 300 TGas) for accounts with a loan. That path is covered by tests but not yet tried with real money.
-
-## Save the kit and the browser extension
-
-- **Exit kit.** `npm run kit` packs the built app into `kit/evac-kit.tar.gz` with a stand-alone `verify.mjs` (needs only Node)
-  and a `SHA256` file. One changed or added file gives `MISMATCH`. The page `/kit` explains it. Compare the hash with the one the
-  protocol publishes in its registry.
-- **Chrome extension.** `npm run extension` builds `extension/dist` (load it unpacked). It reads the registry and warns on
-  look-alike addresses, on the official site when a script changed or a new origin appeared, and when the protocol has raised an
-  alarm. It warns only; the Exit Guard still decides what can be signed. `npm run demo:sites` serves local demo pages and prints
-  demo data, so it can be shown without a deployed registry. Tested in a real Chrome against local pages
-  (`scripts/e2e-extension.mts`: 8 of 8). The registry isn't deployed yet, so on mainnet it has nothing to compare with until it is.
-
-## Run
+## Quick start
 
 ```bash
-npm install --legacy-peer-deps
-npm test                                          # 111 TypeScript tests
-(cd contracts/registry && cargo test)             # 15 contract tests
-npx tsx scripts/scan.ts <account.near>            # live scan + guarded plan from the terminal
-npx tsx scripts/watcher.ts --url https://app.rhea.finance --baseline    # example: print a site fingerprint
-npm run dev                                       # the app
-npm run build && node scripts/hash-out.mjs        # static export + its hash
-```
+npm install                                   # .npmrc sets legacy-peer-deps for the wallet libraries
+npm run dev                                   # the app on http://localhost:3000
+npm test                                      # 111 TypeScript tests
+(cd contracts/registry && cargo test)         # 15 contract tests
 
-How it works end to end: [FLOW.md](FLOW.md). Deploying the registry, DAO and watcher: [DEPLOY.md](DEPLOY.md). Demo script: [DEMO.md](DEMO.md).
-Submission text: [SUBMISSION.md](SUBMISSION.md).
+npm run kit                                   # build the app and pack kit/evac-kit.tar.gz
+npm run extension                             # build the Chrome extension into extension/dist
+npm run demo:sites                            # local pages to demo the extension
+npx tsx scripts/scan.ts <account.near>        # scan an account from the terminal
+```
 
 ## Layout
 
 ```
-extension/      Chrome extension (page check against the registry)
-src/lib/        rpc (quorum) · burrow (scan, plan) · guard · wallet · verify · registry · sitecheck · intents · storage
-src/app/        the static web app
-scripts/        scan · watcher · verify-kit · hash-out · make-kit · build-extension
+src/lib/          rpc (quorum) · burrow (scan, plan) · guard · wallet · verify · registry · sitecheck · intents · storage · tokens
+src/app/          the static web app: landing, /dashboard, /docs, /kit, /extension
+extension/        Chrome extension (checks the page against the registry)
 contracts/registry/   Rust registry contract (near-sdk 5.20)
-test/           111 tests: quorum, guard, plan, verify, registry, sitecheck, intents, hijack corpus
+scripts/          scan · watcher · verify-kit · hash-out · make-kit · build-extension · demo-sites
+test/             111 tests: quorum, guard, plan, verify, registry, sitecheck, intents, extension, hijack corpus
 ```
 
-## Design credit
+## Credit
 
-The idea and structure come from the authors' earlier ETHGlobal Mumbai entry (an exit kit rooted in an ENS name). This
-repository is a new implementation for NEAR: the registry contract, function-call-key permissions, the NEAR Exit Guard,
-the asynchronous-receipt check, the Burrow adapter and the 1Click bridge are all new code.
+The idea and structure come from the authors' earlier ETHGlobal Mumbai entry (an exit kit rooted in an ENS name). This is a new
+implementation for NEAR: the registry contract, function-call-key permissions, the NEAR Exit Guard, the asynchronous-receipt
+check, the Burrow adapter, the 1Click bridge, the kit and the extension are all new code.
