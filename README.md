@@ -1,6 +1,8 @@
+<p><img src="public/evac-mark.svg" alt="" width="56" height="56" /></p>
+
 # Evac
 
-**A fire exit for NEAR DeFi.** When a protocol's website is down or hijacked, your funds are still in its contracts.
+**A fire exit for NEAR DeFi.** The website is hijacked or gone, but your money is still in the contracts. Evac is the way out that never goes through the front door.
 Evac reads your position straight from the contracts, builds the withdrawal on your machine, refuses anything that is
 not a plain withdrawal to you, and tells you honestly whether the money really came back.
 
@@ -21,8 +23,9 @@ flowchart LR
 1. **Scan.** Reads your Burrow lending position (`contract.main.burrow.near`) from four independent NEAR RPC providers at one pinned
    block. One dead provider is tolerated; providers that disagree stop the read.
 2. **Plan.** One `execute` call: free collateral, then withdraw everything. Tokens your account isn't registered with are left
-   out (their withdrawal would be refunded) and the plan says so. With an open loan you get a partial exit of non-collateral
-   deposits.
+   out (their withdrawal would be refunded) and the plan says so. With an open loan, if your other deposits can repay it (plus 1% for interest), the plan repays the
+   loan and then exits fully through Burrow's price-checked `execute_with_pyth`; otherwise you get a partial exit and are told
+   what is missing.
 3. **Guard.** The **Exit Guard** checks the exact transaction before the wallet sees it. It refuses `AddKey`, `Transfer`,
    `DeleteAccount`, unknown contracts or methods, any deposit other than exactly 1 yoctoNEAR, extra fields, and anything it
    cannot decode. There is no override. A 21-payload attack corpus is in the tests.
@@ -59,9 +62,9 @@ No server of ours is in the path: the app is a static export, and the build is r
 | Storage-registration pre-check | done, tested |
 | Reproducible build + hash tools | done |
 
-**Not verified on mainnet:** a real withdrawal. The live Burrow contract differs from its archived source (it now has Pyth
-price paths), so the first real exit with a small position is the key test. With an open loan, Burrow may ask for a price
-check even on a plain withdraw; in that case the transaction fails safely and the Recovered check says so.
+**Not verified on mainnet:** a real withdrawal, and especially the repay-and-exit path for accounts with a loan (it uses
+`execute_with_pyth`, built from the shape of real past calls). The live Burrow contract differs from its archived source, so
+the first real exit with a small position is the key test. If a transaction fails, nothing moves and the Recovered check says so.
 
 ## Tested against real mainnet data
 
@@ -70,13 +73,13 @@ Read-only, on 10 Nov 2026. Nothing was signed or sent.
 - **11 real accounts** of every kind (no debt with collateral, supplied only, with open loans, one that doesn't exist). Each was scanned through the 3-provider quorum, planned, and checked by the Guard. Every plan was accepted by the Guard. Accounts with loans got the partial plan.
 - **18 real historical `execute` transactions** by real users (10 withdrawals, 8 repayments), found by scanning about 2,800 recent transactions on the Burrow contract. The Guard accepted all 18, and the receipt checker found every receipt successful.
 - **Findings that changed the code:** scans were slow because storage checks ran one at a time (81 s down to about 4 s); several real accounts aren't registered with `token.burrow.near`, so that one withdrawal would be refunded, so Evac now leaves unregistered tokens out of the plan and says so; and the site fingerprint raised a false alarm on a real site because of a per-request token in Cloudflare's snippet, so volatile tokens and JSON data blocks are now ignored.
-- **What the real traffic shows:** most user transactions on Burrow today use `execute_with_pyth`, not `execute`. Evac doesn't build or accept `execute_with_pyth` yet, which is why accounts with a loan only get a partial exit.
+- **What the real traffic shows:** most user transactions on Burrow today use `execute_with_pyth`, not `execute`. Evac now builds and accepts `execute_with_pyth` (same actions, 300 TGas) for accounts with a loan. That path is covered by tests but not yet tried with real money.
 
 ## Run
 
 ```bash
 npm install --legacy-peer-deps
-npm test                                          # 96 TypeScript tests
+npm test                                          # 99 TypeScript tests
 (cd contracts/registry && cargo test)             # 15 contract tests
 npx tsx scripts/scan.ts <account.near>            # live scan + guarded plan from the terminal
 npx tsx scripts/watcher.ts --url https://app.rhea.finance --baseline    # example: print a site fingerprint
@@ -94,7 +97,7 @@ src/lib/        rpc (quorum) · burrow (scan, plan) · guard · wallet · verify
 src/app/        the static web app
 scripts/        scan · watcher · verify-kit · hash-out
 contracts/registry/   Rust registry contract (near-sdk 5.20)
-test/           96 tests: quorum, guard, plan, verify, registry, sitecheck, intents, hijack corpus
+test/           99 tests: quorum, guard, plan, verify, registry, sitecheck, intents, hijack corpus
 ```
 
 ## Design credit

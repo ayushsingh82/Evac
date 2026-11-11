@@ -23,7 +23,7 @@ flowchart TD
     E -- "yes" --> F["Check token registration<br/>leave unregistered tokens out"]
     F --> G{"Open loan?"}
     G -- "no" --> H["Full exit: free collateral,<br/>withdraw everything, one call"]
-    G -- "yes" --> I["Partial exit: non-collateral<br/>deposits only, with a note"]
+    G -- "yes" --> I["Deposits cover the loan?<br/>yes: repay, then full exit<br/>no: partial exit with a note"]
     H --> J["Exit Guard checks the exact transaction"]
     I --> J
     J --> K{"Plain withdrawal<br/>to you?"}
@@ -67,7 +67,7 @@ sequenceDiagram
 |---|---|---|
 | Scan | `scanBurrow` over `quorumView` | Pins the lowest "final" block all providers can serve. At least 2 must answer and all answers must be identical |
 | Storage check | `checkStorage` | Up to 4 tokens at a time. An unregistered token's withdrawal would be refunded, so it is left out |
-| Plan | `planExit` | No debt: `DecreaseCollateral` for each collateral token, then `Withdraw` for each token, in one `execute`. With debt: only `Withdraw` of non-collateral deposits |
+| Plan | `planExit` | No debt: `DecreaseCollateral` for each collateral token, then `Withdraw` for each token, in one `execute`. With debt: if non-collateral deposits cover each loan plus 1%, `Repay`, `DecreaseCollateral`, `Withdraw` in one `execute_with_pyth`; otherwise only `Withdraw` of non-collateral deposits, and the shortfall is shown |
 | Guard | `checkTx` | Contract and method allowlist, deposit exactly 1 yocto, exact argument shape, only withdrawal actions, signer must be the connected account |
 | Sign | `signGuarded` | Guards again, then sends a frozen copy, so nothing can change between the check and the signature |
 | Verify | `outcomeFailures`, `evaluateExit` | Every receipt must succeed and every withdrawn token's balance must rise |
@@ -81,7 +81,8 @@ sequenceDiagram
 | Two RPC providers disagree | Stops. It does not guess |
 | One provider is down | Carries on and shows how many agreed |
 | Account has no Burrow position | Says so |
-| Open loan | Partial exit of non-collateral deposits, and tells you to repay first for a full exit |
+| Open loan, other deposits cover it | Repays the loan from them, then a full exit (price-checked call) |
+| Open loan, deposits fall short | Partial exit of non-collateral deposits, and says how much is missing |
 | Account not registered with a token | Leaves that token out and says what to register |
 | The Guard refuses | Nothing is sent. The reasons are shown in plain words |
 | Wallet is a different account than the one scanned | Signing is disabled |
@@ -146,9 +147,9 @@ For a protocol team (or us, as the demo operator). Commands are in [DEPLOY.md](D
 | Scan, storage check, plan and Guard on 11 real accounts (read-only) | **Seen working** |
 | Guard and receipt checker on 18 real historical `execute` transactions | **Seen working**: 18 of 18 accepted, every receipt clean |
 | 1Click dry quote and a real site fingerprint | **Seen working** |
-| Unit tests: 96 TypeScript, 15 contract | **Passing** |
+| Unit tests: 99 TypeScript, 15 contract | **Passing** |
 | Wallet pop-up, signing, redirect resume | **Not tried with a real wallet** |
 | "Recovered" check on a live exit | **Not tried** (tested on fixtures and historical receipts) |
 | Real bridge swap | **Not tried** (dry quote only) |
 | Registry, DAO, watcher publishing | **Written and tested, not deployed** |
-| Full exit for accounts with a loan | **Not built.** Needs `execute_with_pyth`, which is what most live Burrow traffic uses |
+| Full exit for accounts with a loan | **Built, not tried with real money.** Uses `execute_with_pyth`, which most live Burrow traffic uses |

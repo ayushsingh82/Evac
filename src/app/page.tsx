@@ -31,6 +31,7 @@ const STEPS = [
 
 const INCIDENTS = [
   { t: "DNS hijack", d: "Curve, 2022. The site was swapped for a copy that asked users to approve a drainer. The contracts were never touched." },
+  { t: "Social-engineered registrar", d: "Balancer, 2023. The domain's registrar was tricked and the front end was swapped. The contracts kept working." },
   { t: "Poisoned library", d: "Ledger Connect Kit, 2023. A bad release put a drainer inside many apps at once." },
   { t: "Plain outage", d: "A site can simply go dark: lost domain, blocked region, a company that shut down. The funds stay on chain, out of reach." },
 ];
@@ -44,9 +45,28 @@ const FEATURES = [
   { t: "No server of ours", d: "Evac is a static, reproducible build. There is nothing for anyone to switch off." },
 ];
 
+const PROOF: [string, string, string][] = [
+  ["Read 11 real Burrow accounts (no loan, with loan, supplied only, missing)", "All scanned, planned and accepted by the Guard", "npx tsx scripts/scan.ts zavodil.near"],
+  ["Replay 18 real past Burrow withdrawals and repayments through the Guard", "18 of 18 accepted, every receipt clean", "test/hijack-corpus.test.ts + scripts/scan.ts"],
+  ["Hijacked-site payloads (add key, send NEAR, look-alike contract, hidden borrow, extra fields)", "21 attack payloads refused, the real exit passes", "npx vitest run test/guard.test.ts test/hijack-corpus.test.ts"],
+  ["A provider that lies or goes quiet", "Dead one tolerated, disagreeing ones stop the read", "npx vitest run test/rpc.test.ts"],
+  ["A transfer that fails behind a successful first step", "Reported as not recovered, with the reason", "npx vitest run test/verify.test.ts"],
+  ["A changed or injected script on a real DeFi site", "Flagged Compromised; six repeat loads of the real site stay Ok", "npx tsx scripts/watcher.ts --url <site> --baseline"],
+  ["Build the app twice", "Same hash both times", "npm run build && node scripts/hash-out.mjs"],
+  ["Registry contract: a key calls a method it was not given", "Rejected (15 contract tests)", "cd contracts/registry && cargo test"],
+];
+
+const COMPARE: [string, string, string, string][] = [
+  ["Works when the official site is down", "Only while the explorer is up", "Yes, through a gateway", "Yes, a static app with nothing of ours to switch off"],
+  ["Finds your positions for you", "No, you bring the details", "Yes", "Yes, read from the contract"],
+  ["Stops you approving a drainer", "No", "No, it is the full app", "Yes, only plain withdrawals to you pass"],
+  ["Checks the chain data it shows", "One backend", "One RPC", "Four providers must agree at one block"],
+  ["Confirms the money arrived", "No", "No", "Yes, every receipt plus a balance check"],
+];
+
 const FAQ = [
   ["Does Evac hold my keys or funds?", "No. Your wallet signs. Evac only reads the chain, builds the transaction, and checks it before your wallet sees it."],
-  ["What if I have an open loan?", "Freeing collateral needs price data that this version doesn't build yet, so Evac makes a partial exit of your non-collateral deposits and explains why. Repay first to exit fully."],
+  ["What if I have an open loan?", "If your other deposits can repay it, Evac repays the loan from them and then exits fully, using Burrow's price-checked call. If they can't, you get a partial exit of your non-collateral deposits and Evac tells you what is missing. The repay-and-exit path hasn't been tried with real money yet."],
   ["What does it cost?", "Network gas only. If you bridge out, NEAR Intents' 1Click quote shows its fee before you commit. Evac takes nothing."],
   ["Which wallets work?", "Anything wallet-selector supports; MyNearWallet, Meteor and HOT are wired in."],
   ["What happens if the exit fails?", "Evac checks every receipt and your balance. If a token transfer failed and the protocol refunded the deposit, it tells you instead of saying Recovered."],
@@ -76,8 +96,11 @@ export default function Landing() {
             <div className="label">The problem</div>
             <h2 className="big">The contracts are fine. The website is the weak point.</h2>
             <p className="soft">
-              When a front end is hijacked or disappears, the money is still sitting in the protocol&apos;s contracts. There just
-              isn&apos;t a safe way to reach it. Evac is that way.
+              When a website is hijacked or simply goes offline, nothing is wrong with the contracts and your money is still there.
+              People sign what looks like the real site and approve a drainer, or find the site gone and can&apos;t reach their funds.
+              The usual fallback, a block explorer&apos;s &ldquo;write contract&rdquo; page, is another website. Evac is a way out that
+              never goes through the front door: it reads your position from the contracts, refuses anything that isn&apos;t a plain
+              withdrawal to you, and tells you honestly whether the money came back.
             </p>
           </div>
           <div className="stack-cards">
@@ -146,6 +169,44 @@ Exit Guard: refused
           </div>
         </section>
 
+        <section className="sec" id="compare">
+          <div className="label">Why not the usual fallback</div>
+          <h2 className="big">Etherscan-style &ldquo;write contract&rdquo; is just another website</h2>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead>
+                <tr><th></th><th>Block explorer &ldquo;write contract&rdquo;</th><th>A copy of the app</th><th>Evac</th></tr>
+              </thead>
+              <tbody>
+                {COMPARE.map((r) => (
+                  <tr key={r[0]}>
+                    <th scope="row">{r[0]}</th><td>{r[1]}</td><td>{r[2]}</td><td className="us">{r[3]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section className="sec" id="proof">
+          <div className="label">Don&apos;t trust us, check</div>
+          <h2 className="big">Every claim has a command you can run</h2>
+          <div className="tbl-wrap">
+            <table className="tbl">
+              <thead><tr><th>What we tried</th><th>Result</th><th>Reproduce</th></tr></thead>
+              <tbody>
+                {PROOF.map((r) => (
+                  <tr key={r[0]}><td>{r[0]}</td><td className="us">{r[1]}</td><td><code>{r[2]}</code></td></tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="fine">
+            Not proven yet: a real withdrawal signed with a real wallet, a real bridge swap, and the registry running on mainnet. We say
+            so rather than claim it. Everything above was read-only on live data.
+          </p>
+        </section>
+
         <section className="sec two" id="faq">
           <div>
             <div className="label">Questions</div>
@@ -165,7 +226,7 @@ Exit Guard: refused
         <section className="cta2">
           <div className="tile-grain" />
           <h2>Know your exit before you need it.</h2>
-          <p>Open Evac, scan your account, and see your exit plan now.</p>
+          <p>Open Evac, scan your account, and see your exit plan now, while the website still works.</p>
           <div className="row" style={{ justifyContent: "center" }}>
             <Link className="btn2" href="/dashboard">Open the exit</Link>
             <Link className="btn2" href="/docs">Read the docs</Link>
