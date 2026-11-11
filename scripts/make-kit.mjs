@@ -65,4 +65,7 @@ execFileSync("tar", ["-czf", "kit/evac-kit.tar.gz", "-C", "kit", "evac-kit"]);
 // Serve the package from the site itself: public/download is copied into the next build.
 mkdirSync("public/download", { recursive: true });
 cpSync("kit/evac-kit.tar.gz", "public/download/evac-kit.tar.gz");
+// ...and into the finished build, so a deploy that runs `next build && node scripts/make-kit.mjs` serves it too.
+mkdirSync("out/download", { recursive: true });
+cpSync("kit/evac-kit.tar.gz", "out/download/evac-kit.tar.gz");
 console.log(`kit/evac-kit.tar.gz  (${files} files)\n${digest}`);

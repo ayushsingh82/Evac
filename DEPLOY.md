@@ -45,3 +45,17 @@ Run it from cron every few minutes. The watcher key can call only `set_status` a
 Modern sites rename script files on every deploy. The watcher treats a new same-origin file as "Degraded: publish a new
 fingerprint", and only raises `Compromised` for changed content behind the same address, a new inline script or a new
 origin. A protocol that adopts Evac should publish a fresh fingerprint in its release process.
+
+## Deploy the site on Vercel
+
+The app is a static export, so Vercel just serves files. `vercel.json` already sets everything:
+
+- install: `npm install` (`.npmrc` sets `legacy-peer-deps`, which the wallet libraries need)
+- build: `next build && node scripts/make-kit.mjs` (the second step puts `evac-kit.tar.gz` into `out/download/` for the Download button)
+- output directory: `out`
+
+Steps: push the repo, then on vercel.com choose Add New Project, import `ayushsingh82/Evac`, keep the defaults, Deploy.
+Optional environment variable: `NEXT_PUBLIC_REGISTRY_ID` (the registry account) once the registry is deployed.
+
+Checked in a clean copy with no `node_modules`: install, build, the `/kit` page and its download, and the kit's hash matching the
+deployed site's hash all pass. Not checked: an actual Vercel deployment, which needs your Vercel account.
