@@ -21,7 +21,7 @@ const isRecord = (v: unknown): v is Record<string, unknown> => !!v && typeof v =
 /** Decode the `actions` argument of Burrow's `execute`; returns reasons if anything is off. */
 function checkBurrowExecuteArgs(args: unknown, reasons: string[], explain: string[]) {
   if (!isRecord(args) || !Array.isArray(args.actions) || Object.keys(args).length !== 1) {
-    reasons.push("The arguments to execute are not in the expected shape, so they cannot be checked.");
+    reasons.push("The arguments to the Burrow call are not in the expected shape, so they cannot be checked.");
     return;
   }
   if (args.actions.length === 0) reasons.push("execute was called with no actions.");
@@ -90,7 +90,7 @@ export function checkTx(tx: NearTx, manifest: Manifest, connectedAccount: string
       reasons.push("The attached deposit is not exactly 1 yoctoNEAR, so NEAR could leave your account.");
     }
     if (!/^\d+$/.test(action.gas)) reasons.push("The gas amount is unreadable.");
-    if (manifest.protocol === "burrow" && action.methodName === "execute") {
+    if (manifest.protocol === "burrow" && (action.methodName === "execute" || action.methodName === "execute_with_pyth")) {
       checkBurrowExecuteArgs(action.args, reasons, explain);
     } else {
       // Fail closed: a method with no decoder cannot be checked, even if a manifest lists it.

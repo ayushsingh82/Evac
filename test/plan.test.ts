@@ -94,3 +94,43 @@ describe("planExit", () => {
     expect((action.args as { actions: Record<string, { token_id: string }>[] }).actions.map((a) => a.Withdraw.token_id)).toEqual(["usdc.near"]);
   });
 });
+
+describe("planExit with a loan, price-checked call", () => {
+  const debtPos = (supplyUsdt: string) =>
+    base({
+      supplied: [bal("usdt.near", supplyUsdt), bal("token.burrow.near", "5")],
+      collateral: [bal("wrap.near", "700")],
+      borrowed: [bal("usdt.near", "1000")],
+    });
+
+  it("deposits cover the loan: repay, free collateral, withdraw all, via execute_with_pyth", () => {
+    const plan = planExit(debtPos("1100"));
+    expect(plan.kind).toBe("full");
+    const a = plan.steps[0].tx.actions[0];
+    if (a.type !== "FunctionCall") throw new Error("x");
+    expect(a.methodName).toBe("execute_with_pyth");
+    expect(a.gas).toBe("300000000000000");
+    const names = (a.args as { actions: object[] }).actions.map((x) => Object.keys(x)[0]);
+    expect(names[0]).toBe("Repay");
+    expect(names).toContain("DecreaseCollateral");
+    expect(checkTx(plan.steps[0].tx, BURROW_MANIFEST, "alice.near").ok).toBe(true);
+  });
+
+  it("deposits fall short (even by under the 1% interest margin): partial, says what is missing", () => {
+    const plan = planExit(debtPos("1005"));
+    expect(plan.kind).toBe("partial");
+    expect(plan.notes.join(" ")).toContain("usdt.near");
+    const a = plan.steps[0].tx.actions[0];
+    if (a.type !== "FunctionCall") throw new Error("x");
+    expect(a.methodName).toBe("execute_with_pyth");
+    expect(checkTx(plan.steps[0].tx, BURROW_MANIFEST, "alice.near").ok).toBe(true);
+  });
+
+  it("the guard still refuses Borrow through execute_with_pyth", () => {
+    const tx = planExit(debtPos("1100")).steps[0].tx;
+    const a = tx.actions[0];
+    if (a.type !== "FunctionCall") throw new Error("x");
+    const bad = { ...tx, actions: [{ ...a, args: { actions: [{ Borrow: { token_id: "usdt.near", amount: "1" } }] } }] };
+    expect(checkTx(bad, BURROW_MANIFEST, "alice.near").ok).toBe(false);
+  });
+});

@@ -11,7 +11,7 @@ export const BURROW_MANIFEST: Manifest = {
   protocol: "burrow",
   version: 1,
   contracts: {
-    [BURROW]: { methods: ["execute"] },
+    [BURROW]: { methods: ["execute", "execute_with_pyth"] },
   },
 };
 
@@ -20,3 +20,4 @@ export const BURROW_EXIT_ACTIONS = ["DecreaseCollateral", "Withdraw", "Repay"] a
 
 export const ONE_YOCTO = "1";
 export const EXIT_GAS = "200000000000000"; // 200 TGas, as in Burrow's README examples
+export const PYTH_GAS = "300000000000000"; // 300 TGas: execute_with_pyth fetches prices first, real users attach this much

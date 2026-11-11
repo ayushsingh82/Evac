@@ -204,7 +204,7 @@ npx tsx scripts/watcher.ts --registry <registry> --protocol burrow  # check once
           <h2 id="limits">Limits</h2>
           <ul>
             <li>Evac has not yet signed a real withdrawal. It has been checked read-only against 11 real accounts and 18 real historical Burrow transactions (the Guard accepted all 18 and every receipt succeeded), but wallet signing itself is untested.</li>
-            <li>Most real Burrow traffic uses <code>execute_with_pyth</code>. Evac doesn&apos;t build or accept it yet, which is why accounts with a loan only get a partial exit.</li>
+            <li>Accounts with a loan use <code>execute_with_pyth</code>, the price-checked call BurrowMost real Burrow traffic uses <code>execute_with_pyth</code>. Evac doesn&apos;t build or accept it yet, which is why accounts with a loan only get a partial exit.apos;s own front end makes. If your other deposits can repay the loan, Evac repays and exits fully; otherwise you get a partial exit and are told what is missing. Not yet tried with real money.</li>
             <li>The live Burrow contract differs from its archived source. With an open loan, Burrow may ask for a price check even on a withdraw. If so, the transaction fails safely and Evac says so.</li>
             <li>The registry contract and DAO are written and tested but not deployed yet, so the exit list is built in.</li>
             <li>Only Burrow is supported. Other protocols are planned.</li>

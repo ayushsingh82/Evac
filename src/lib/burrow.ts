@@ -1,6 +1,6 @@
 // Burrow adapter: scan a user's positions and build the exit plan.
 
-import { BURROW, EXIT_GAS, ONE_YOCTO } from "./manifest";
+import { BURROW, EXIT_GAS, ONE_YOCTO, PYTH_GAS } from "./manifest";
 import { quorumView, type RpcOptions } from "./rpc";
 import type { AssetBalance, BurrowAccountView, ExitPlan, ExitStep, Position, QuorumResult } from "./types";
 
@@ -26,7 +26,7 @@ export async function scanBurrow(
   };
 }
 
-function executeTx(accountId: string, title: string, actions: unknown[]): ExitStep {
+function executeTx(accountId: string, title: string, actions: unknown[], withPrices = false): ExitStep {
   return {
     title,
     tx: {
@@ -35,9 +35,9 @@ function executeTx(accountId: string, title: string, actions: unknown[]): ExitSt
       actions: [
         {
           type: "FunctionCall",
-          methodName: "execute",
+          methodName: withPrices ? "execute_with_pyth" : "execute",
           args: { actions },
-          gas: EXIT_GAS,
+          gas: withPrices ? PYTH_GAS : EXIT_GAS,
           deposit: ONE_YOCTO,
         },
       ],
@@ -85,13 +85,35 @@ export function planExit(p: Position, opts: { skip?: ReadonlySet<string> } = {})
     };
   }
 
-  // Debt case: partial, no oracle needed.
+  // Debt case. Burrow needs prices for anything that touches collateral while a loan is open, so these plans use
+  // `execute_with_pyth`, the call Burrow's own front end makes.
+  const owed = debtCoverage(p);
+  if (owed.covered) {
+    // Deposits that are not collateral already cover every loan: repay them, then leave completely.
+    const actions: unknown[] = [];
+    for (const b of p.borrowed) actions.push({ Repay: { token_id: b.token_id } });
+    for (const c of collateral) actions.push({ DecreaseCollateral: { token_id: c.token_id } });
+    const all = new Set([...supplied.map((s) => s.token_id), ...collateral.map((c) => c.token_id)]);
+    const tokens = new Set([...all].filter((t) => !skip.has(t)));
+    for (const t of tokens) actions.push({ Withdraw: { token_id: t } });
+    notes.push(...skippedNote(all, skip));
+    notes.push(
+      "You have an open loan, but your other deposits are enough to repay it. This exit repays the loan from them, then withdraws everything. It uses Burrow's price-checked call. Not yet tried with real money: if it fails, nothing moves.",
+    );
+    if (tokens.size === 0) return { kind: "nothing", steps: [], notes };
+    return {
+      kind: "full",
+      steps: [executeTx(p.accountId, `Repay the loan and withdraw ${tokens.size} asset(s) from Burrow`, actions, true)],
+      notes,
+    };
+  }
+
+  // Not enough to repay: partial exit of the non-collateral deposits only.
   // `supplied` in get_account is the non-collateral balance, kept separate from `collateral`.
   const free = supplied.filter((s) => !skip.has(s.token_id));
   notes.push(...skippedNote(new Set(supplied.map((s) => s.token_id)), skip));
   notes.push(
-    "You have an open loan. Freeing collateral needs price data that this version does not build yet, so only your non-collateral deposits are withdrawn. Repay the loan first to exit fully.",
-    "Unverified on mainnet: Burrow may still ask for a price check on a withdraw while a loan is open. If it does, the transaction fails safely and nothing moves.",
+    `You have an open loan that your other deposits can't repay${owed.short.length ? ` (still needed: ${owed.short.join(", ")})` : ""}. Your collateral stays locked, so only your non-collateral deposits are withdrawn. Add the missing amount to Burrow, or repay the loan, and scan again for a full exit.`,
   );
   if (free.length === 0) {
     return { kind: "nothing", steps: [], notes };
@@ -103,10 +125,22 @@ export function planExit(p: Position, opts: { skip?: ReadonlySet<string> } = {})
         p.accountId,
         `Withdraw ${free.length} non-collateral asset(s) from Burrow`,
         free.map((s) => ({ Withdraw: { token_id: s.token_id } })),
+        true,
       ),
     ],
     notes,
   };
+}
+
+/** Do the non-collateral deposits cover every loan, with a 1% margin for interest that builds up before signing? */
+export function debtCoverage(p: Position): { covered: boolean; short: string[] } {
+  const short: string[] = [];
+  for (const b of p.borrowed) {
+    const have = BigInt(p.supplied.find((s) => s.token_id === b.token_id)?.balance || "0");
+    const need = (BigInt(b.balance || "0") * BigInt(101)) / BigInt(100) + BigInt(1);
+    if (have < need) short.push(`${b.token_id} (${(need - have).toString()} raw units)`);
+  }
+  return { covered: short.length === 0, short };
 }
 
 /** Tokens the plan will withdraw, read back from the guarded transactions (used for the balance check). */
