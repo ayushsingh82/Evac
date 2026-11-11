@@ -52,7 +52,8 @@ The app is a static export, so Vercel just serves files. `vercel.json` already s
 
 - install: `npm install` (`.npmrc` sets `legacy-peer-deps`, which the wallet libraries need)
 - build: `next build && node scripts/make-kit.mjs` (the second step puts `evac-kit.tar.gz` into `out/download/` for the Download button)
-- output directory: `out`
+- output directory: `out`, served as plain static files (framework "Other", so Vercel does not look for Next.js server files)
+- `cleanUrls`: `/kit` serves `kit.html`, and so on
 
 Steps: push the repo, then on vercel.com choose Add New Project, import `ayushsingh82/Evac`, keep the defaults, Deploy.
 Optional environment variable: `NEXT_PUBLIC_REGISTRY_ID` (the registry account) once the registry is deployed.
