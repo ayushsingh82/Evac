@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { ICONS, TINTS } from "./candy";
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import { EvacMark } from "./logo";
 
 /* One clock drives everything: a long Web Animation's currentTime. */
 const SLOT = 1.75; // seconds per word
@@ -144,7 +145,7 @@ export default function Hero() {
         <div className="hx-grain" />
 
         <nav className="hx-nav">
-          <Link href="/" className="hx-logo">evac</Link>
+          <Link href="/" className="hx-logo"><EvacMark />evac</Link>
           <div className="hx-links">
             <a href="#how">How it works <Chevron /></a>
             <a href="#protocols">Protocols <Chevron /></a>
@@ -177,9 +178,9 @@ export default function Hero() {
             How it works
           </a>
           <p className="hx-cap">
-            Evac is a fire exit for NEAR DeFi. It reads your position from the contracts,
+            The website is hijacked or gone, but your money is still in the contracts.
             <br />
-            checks every withdrawal, and proves the money came back.
+            Evac is the way out that never goes through the front door.
           </p>
         </div>
       </div>

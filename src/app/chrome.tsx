@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { EvacMark } from "./logo";
 
 /** Slim cream nav for inner pages (the landing page has the hero's own nav). */
 export function SiteNav() {
   return (
     <nav className="sn">
       <Link href="/" className="hx-logo" style={{ fontSize: 24 }}>
+        <EvacMark />
         evac
       </Link>
       <div className="sn-links">
@@ -23,9 +25,10 @@ export function SiteFooter() {
       <div className="sf-in">
         <div className="sf-brand">
           <Link href="/" className="hx-logo" style={{ fontSize: 24 }}>
-                evac
+            <EvacMark />
+            evac
           </Link>
-          <p>A fire exit for NEAR DeFi. Read your position from the contracts, check every withdrawal, prove the money came back.</p>
+          <p>A fire exit for NEAR DeFi. When the website is hijacked or gone, your money is still in the contracts. Evac is the way out that never goes through the front door.</p>
         </div>
         <div>
           <h4>Product</h4>
