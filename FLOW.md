@@ -147,7 +147,7 @@ For a protocol team (or us, as the demo operator). Commands are in [DEPLOY.md](D
 | Scan, storage check, plan and Guard on 11 real accounts (read-only) | **Seen working** |
 | Guard and receipt checker on 18 real historical `execute` transactions | **Seen working**: 18 of 18 accepted, every receipt clean |
 | 1Click dry quote and a real site fingerprint | **Seen working** |
-| Unit tests: 99 TypeScript, 15 contract | **Passing** |
+| Unit tests: 111 TypeScript, 15 contract | **Passing** |
 | Wallet pop-up, signing, redirect resume | **Not tried with a real wallet** |
 | "Recovered" check on a live exit | **Not tried** (tested on fixtures and historical receipts) |
 | Real bridge swap | **Not tried** (dry quote only) |

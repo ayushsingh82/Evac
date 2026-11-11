@@ -75,11 +75,21 @@ Read-only, on 10 Nov 2026. Nothing was signed or sent.
 - **Findings that changed the code:** scans were slow because storage checks ran one at a time (81 s down to about 4 s); several real accounts aren't registered with `token.burrow.near`, so that one withdrawal would be refunded, so Evac now leaves unregistered tokens out of the plan and says so; and the site fingerprint raised a false alarm on a real site because of a per-request token in Cloudflare's snippet, so volatile tokens and JSON data blocks are now ignored.
 - **What the real traffic shows:** most user transactions on Burrow today use `execute_with_pyth`, not `execute`. Evac now builds and accepts `execute_with_pyth` (same actions, 300 TGas) for accounts with a loan. That path is covered by tests but not yet tried with real money.
 
+## Save the kit and the browser extension
+
+- **Exit kit.** `npm run kit` packs the built app into `kit/evac-kit.tar.gz` with a stand-alone `verify.mjs` (needs only Node)
+  and a `SHA256` file. One changed or added file gives `MISMATCH`. The page `/kit` explains it. Compare the hash with the one the
+  protocol publishes in its registry.
+- **Chrome extension.** `npm run extension` builds `extension/dist` (load it unpacked). It reads the registry and warns on
+  look-alike addresses, on the official site when a script changed or a new origin appeared, and when the protocol has raised an
+  alarm. It warns only; the Exit Guard still decides what can be signed. Tested in a real Chrome against local pages
+  (`scripts/e2e-extension.mts`: 8 of 8). The registry isn't deployed yet, so on mainnet it has nothing to compare with until it is.
+
 ## Run
 
 ```bash
 npm install --legacy-peer-deps
-npm test                                          # 99 TypeScript tests
+npm test                                          # 111 TypeScript tests
 (cd contracts/registry && cargo test)             # 15 contract tests
 npx tsx scripts/scan.ts <account.near>            # live scan + guarded plan from the terminal
 npx tsx scripts/watcher.ts --url https://app.rhea.finance --baseline    # example: print a site fingerprint
@@ -93,11 +103,12 @@ Submission text: [SUBMISSION.md](SUBMISSION.md).
 ## Layout
 
 ```
+extension/      Chrome extension (page check against the registry)
 src/lib/        rpc (quorum) · burrow (scan, plan) · guard · wallet · verify · registry · sitecheck · intents · storage
 src/app/        the static web app
-scripts/        scan · watcher · verify-kit · hash-out
+scripts/        scan · watcher · verify-kit · hash-out · make-kit · build-extension
 contracts/registry/   Rust registry contract (near-sdk 5.20)
-test/           99 tests: quorum, guard, plan, verify, registry, sitecheck, intents, hijack corpus
+test/           111 tests: quorum, guard, plan, verify, registry, sitecheck, intents, hijack corpus
 ```
 
 ## Design credit
