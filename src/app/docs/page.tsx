@@ -14,6 +14,8 @@ const TOC: TocGroup[] = [
       { id: "registry", label: "Registry and keys" },
       { id: "watcher", label: "The watcher" },
       { id: "bridge", label: "Bridge out" },
+      { id: "kit", label: "Save the kit" },
+      { id: "extension", label: "Browser extension" },
     ],
   },
   { title: "Help", items: [{ id: "trouble", label: "Troubleshooting" }, { id: "limits", label: "Limits" }, { id: "glossary", label: "Glossary" }] },
@@ -192,10 +194,30 @@ npx tsx scripts/watcher.ts --registry <registry> --protocol burrow  # check once
             quoted deposit address, with exactly 1 yoctoNEAR attached. Dry quotes need no API key.
           </p>
 
+          <h2 id="kit">Save the kit</h2>
+          <p>
+            Keep a copy of Evac as plain files, and check it matches the published build before you rely on it.
+          </p>
+          <Code>{`npm run kit                       # writes kit/evac-kit.tar.gz
+tar -xzf evac-kit.tar.gz && cd evac-kit
+node verify.mjs                   # MATCH or MISMATCH
+npx serve app                     # run it`}</Code>
+          <p>See <Link href="/kit">Save the kit</Link>.</p>
+
+          <h2 id="extension">Browser extension</h2>
+          <p>
+            A Chrome extension that compares the site you are on with what the protocol published in its registry. It warns on
+            listed look-alike addresses, on the official site when a script changed, and when the protocol has raised an alarm.
+            It warns only; the Exit Guard still decides what can be signed.
+          </p>
+          <Code>{`npm run extension                 # builds extension/dist
+# chrome://extensions -> Developer mode -> Load unpacked -> extension/dist`}</Code>
+          <p>See <Link href="/extension">Browser extension</Link>.</p>
+
           <h2 id="trouble">Troubleshooting</h2>
           <div className="faq">
             <details><summary>It says Not confirmed as recovered, but the transaction succeeded</summary><p>On NEAR a transaction can succeed while a later step fails. If a token transfer fails, Burrow refunds the deposit. The usual cause is that your account isn&apos;t registered with that token contract. Register it (a one-time storage deposit of about 0.00125 NEAR) and try again.</p></details>
-            <details><summary>I only got a partial exit</summary><p>You have an open loan. Freeing collateral needs price data that this version doesn&apos;t build yet, so Evac only withdraws non-collateral deposits. Repay the loan first to exit fully.</p></details>
+            <details><summary>I only got a partial exit</summary><p>You have an open loan that your other deposits can&apos;t repay. Evac withdraws only the non-collateral deposits and shows how much is missing. Add that amount, or repay the loan, and scan again.</p></details>
             <details><summary>Scan stops with an RPC error</summary><p>If two providers disagree, Evac refuses to act on a wrong answer. Wait a few seconds and scan again. The Network health card on the dashboard shows which providers are slow or down.</p></details>
             <details><summary>My wallet sends me away and back</summary><p>Some wallets use a redirect. Evac saves your starting balances first, then finishes the check when you return.</p></details>
             <details><summary>The Guard refused my own withdrawal</summary><p>Check that your connected wallet is the account you scanned, and that the exit list matches the protocol&apos;s current contract.</p></details>

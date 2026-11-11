@@ -7,7 +7,7 @@ const interTight = Inter_Tight({ subsets: ["latin"], variable: "--font-inter-tig
 export const metadata: Metadata = {
   title: "Evac: fire exit for NEAR DeFi",
   description:
-    "The website is hijacked or gone, but your money is still in the contracts. Evac is the way out that never goes through the front door: read your position straight from the NEAR contracts and withdraw safely.",
+    "Website hijacked or gone? Your funds are still on chain. Evac reads your position from the NEAR contracts and withdraws it safely.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

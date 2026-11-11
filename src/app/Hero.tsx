@@ -150,6 +150,8 @@ export default function Hero() {
             <a href="#how">How it works <Chevron /></a>
             <a href="#protocols">Protocols <Chevron /></a>
             <a href="#security">Security <Chevron /></a>
+            <Link href="/kit">Kit</Link>
+            <Link href="/extension">Extension</Link>
             <Link href="/dashboard" className="hx-join">Open Evac</Link>
           </div>
         </nav>
@@ -178,9 +180,9 @@ export default function Hero() {
             How it works
           </a>
           <p className="hx-cap">
-            The website is hijacked or gone, but your money is still in the contracts.
+            Website hijacked or gone? Your funds are still on chain.
             <br />
-            Evac is the way out that never goes through the front door.
+            Evac gets them out, safely.
           </p>
         </div>
       </div>
