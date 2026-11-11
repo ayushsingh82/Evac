@@ -18,12 +18,13 @@ export default function KitPage() {
         </p>
 
         <section className="sec" style={{ marginTop: 48 }}>
-          <h2 className="big" style={{ fontSize: 28 }}>1. Get it</h2>
-          <p className="soft">Build it from the source yourself, or download the release file and skip to step 2.</p>
-          <Code>{`git clone https://github.com/ayushsingh82/Evac.git
-cd Evac
-npm install --legacy-peer-deps
-npm run kit          # builds the app and packs it into kit/evac-kit.tar.gz`}</Code>
+          <h2 className="big" style={{ fontSize: 28 }}>1. Download it</h2>
+          <p className="soft">One file. Save it somewhere you will find it, like a USB stick or your cloud drive.</p>
+          <a className="kit-dl" href="/download/evac-kit.tar.gz" download>
+            <span>Download the kit</span>
+            <small>evac-kit.tar.gz</small>
+          </a>
+          <p className="fine">Prefer to build it yourself? Run <code>npm run kit</code> in the Evac source folder. You get the same file.</p>
         </section>
 
         <section className="sec" style={{ marginTop: 40 }}>
@@ -54,7 +55,7 @@ node verify.mjs sha256:<hash>         # compares with a hash you got from the pr
 
         <section className="sec" style={{ marginTop: 40 }}>
           <h2 className="big" style={{ fontSize: 28 }}>What the kit is not</h2>
-          <ul className="soft" style={{ paddingLeft: 20, lineHeight: 1.7 }}>
+          <ul className="soft" style={{ paddingLeft: 20, lineHeight: 1.7, listStyle: "disc" }}>
             <li>It is not a wallet. It never holds keys. Your wallet signs.</li>
             <li>The wallet pop-ups (MyNearWallet, Meteor, HOT) are their own sites. If your wallet&apos;s website is also down, use another wallet.</li>
             <li>It needs at least two working NEAR RPC providers that agree.</li>
