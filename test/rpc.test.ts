@@ -70,3 +70,14 @@ describe("quorumView", () => {
     expect(r.block.height).toBe(997);
   });
 });
+
+describe("quorumView, contract call fails", () => {
+  it("reports the contract's own error instead of crashing when every provider says the call failed", async () => {
+    const f = (async (_u: string, init: RequestInit) => {
+      const body = JSON.parse(init.body as string);
+      const result = body.method === "block" ? { header: { height: 1000, hash: "h" } } : { error: "MethodResolveError(MethodNotFound)" };
+      return { ok: true, status: 200, json: async () => ({ result }) } as Response;
+    }) as unknown as typeof fetch;
+    await expect(quorumView("nope.near", "get", {}, { rpcs: RPCS, fetchImpl: f })).rejects.toThrow(/contract call failed.*MethodNotFound/);
+  });
+});

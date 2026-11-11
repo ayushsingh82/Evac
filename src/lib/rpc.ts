@@ -129,13 +129,22 @@ export async function quorumView<T>(
   const settled = await Promise.allSettled(live.map((u) => rpcCall<CallFunctionResult>(u, "query", params, o)));
   const answers: { url: string; value: T; key: string }[] = [];
   const failed = [...pinFailed];
+  const contractErrors: string[] = [];
   settled.forEach((s, i) => {
-    if (s.status === "fulfilled") {
+    if (s.status === "fulfilled" && !Array.isArray((s.value as { result?: unknown }).result)) {
+      // The node answered, but the call itself failed (for example: no contract on that account).
+      const err = (s.value as { error?: unknown }).error;
+      contractErrors.push(typeof err === "string" ? err : "the contract call returned no result");
+      failed.push(live[i]);
+    } else if (s.status === "fulfilled") {
       const text = new TextDecoder().decode(Uint8Array.from(s.value.result));
       const value = JSON.parse(text) as T;
       answers.push({ url: live[i], value, key: canonical(value) });
     } else failed.push(live[i]);
   });
+  if (answers.length < 2 && contractErrors.length >= 2) {
+    throw new QuorumError(`The contract call failed on every provider: ${contractErrors[0]}`, { failed });
+  }
   if (answers.length < 2) {
     throw new QuorumError(`Only ${answers.length} provider answered the read; need 2`, { failed });
   }
