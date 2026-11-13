@@ -45,6 +45,77 @@ flowchart LR
 
 Full flow, failure branches and a code map: **[FLOW.md](FLOW.md)**.
 
+## Architecture
+
+Everything that touches your money runs in the browser. The only on-chain component we own is a small registry contract, and
+it is read, never trusted blindly.
+
+```mermaid
+flowchart TB
+    subgraph Browser["Your browser (static files, no Evac server)"]
+        UI["Next.js app<br/>landing, dashboard, docs, kit"]
+        RPCQ["RPC quorum<br/>4 providers, one pinned block"]
+        PLAN["Burrow adapter<br/>scan and exit plan"]
+        GUARD["Exit Guard<br/>fail-closed allowlist"]
+        VER["Verifier<br/>receipts and balances"]
+        SITE["Transaction checker"]
+        UI --> RPCQ --> PLAN --> GUARD
+        UI --> SITE --> GUARD
+        GUARD --> VER
+    end
+
+    subgraph NEAR["NEAR"]
+        BURROW["Burrow<br/>contract.main.burrow.near"]
+        REG["Evac registry contract<br/>exit list, kit hash,<br/>fingerprint, alarm, blocklist"]
+        WALLET["Wallet<br/>MyNearWallet, Meteor, HOT"]
+    end
+
+    subgraph Off["Off-chain helpers"]
+        WATCH["Watcher<br/>fingerprints the live site"]
+        EXT["Chrome extension<br/>warns on look-alikes"]
+        KIT["Exit kit<br/>app + verify.mjs"]
+        INTENTS["NEAR Intents 1Click<br/>optional bridge out"]
+    end
+
+    RPCQ -- "reads" --> BURROW
+    RPCQ -- "reads" --> REG
+    GUARD -- "frozen copy" --> WALLET
+    WALLET -- "signed withdrawal" --> BURROW
+    VER -- "reads receipts" --> RPCQ
+    WATCH -- "set_status, set_blocklist<br/>(limited key)" --> REG
+    EXT -- "reads" --> REG
+    KIT -- "hash must match" --> REG
+    VER -. "optional" .-> INTENTS
+
+    classDef app fill:#EAF3E4,stroke:#294634,stroke-width:2px,color:#0D0D0C
+    classDef safe fill:#c4fa4f,stroke:#0D0D0C,stroke-width:3px,color:#0D0D0C
+    classDef chain fill:#E3ECFA,stroke:#2F5BA8,stroke-width:2px,color:#0D0D0C
+    classDef trust fill:#FFF1CC,stroke:#B7791F,stroke-width:2px,color:#0D0D0C
+    classDef off fill:#F2E6F7,stroke:#7B4B94,stroke-width:2px,color:#0D0D0C
+    class UI,RPCQ,PLAN,SITE,VER app
+    class GUARD safe
+    class BURROW,WALLET chain
+    class REG trust
+    class WATCH,EXT,KIT,INTENTS off
+    style Browser fill:#F7FBF3,stroke:#294634,stroke-width:2px,stroke-dasharray: 6 4
+    style NEAR fill:#F4F8FE,stroke:#2F5BA8,stroke-width:2px,stroke-dasharray: 6 4
+    style Off fill:#FBF6FD,stroke:#7B4B94,stroke-width:2px,stroke-dasharray: 6 4
+```
+
+**Key:** green = runs in your browser · lime = the Exit Guard (the one gate) · blue = NEAR contracts and wallet · amber = the trust root (registry) · purple = optional helpers.
+
+| Layer | What it is | Where |
+|---|---|---|
+| **Web app** | Static Next.js export. Scan, plan, guard, sign, verify, bridge | `src/app/`, `src/lib/` |
+| **Read path** | Four independent NEAR RPC providers must agree at one pinned block, or Evac stops | `src/lib/rpc.ts` |
+| **Safety core** | Exit Guard (allowlist, exact shapes, 1 yocto, signer check) and the receipt verifier | `src/lib/guard.ts`, `src/lib/verify.ts` |
+| **Trust root** | Rust registry contract, DAO-owned, with function-call keys limited to one role each | `contracts/registry/` |
+| **Watcher** | Hashes every script on the live site and raises `Compromised` on a change | `scripts/watcher.ts` |
+| **Carry-it-with-you** | Reproducible exit kit and a Chrome extension that reads the registry | `scripts/make-kit.mjs`, `extension/` |
+
+Design rules we held to: no server of ours in the path, fail closed on anything undecodable, never act on a read the
+providers disagree about, and call an exit "Recovered" only when every receipt succeeded and each balance rose.
+
 ## What's built
 
 | | Feature | What it does |
@@ -86,7 +157,7 @@ Said plainly, so nobody is surprised:
 - A **real withdrawal signed with a real wallet**. Wallet signing and the live "Recovered" check are tested on fixtures and historical receipts only.
 - The **repay-and-exit** path for accounts with a loan (uses Burrow's `execute_with_pyth`). Built from the shape of real past calls, covered by tests, not tried with real money.
 - A **real bridge swap** (only a dry quote was run).
-- The **registry, DAO and watcher publishing** on mainnet. Written and tested, not deployed.
+- The **registry, DAO and watcher publishing** on mainnet. Deployed and exercised on testnet (`evac-registry-7k2.testnet`: release hash, limited watcher key, alarm); not on mainnet, and no DAO yet.
 - Only Burrow is supported. Ref and liquid staking are planned.
 
 ## Quick start
