@@ -6,7 +6,7 @@ import { planExit, scanBurrow, withdrawnTokens } from "@/lib/burrow";
 import { checkTx } from "@/lib/guard";
 import { BURROW_MANIFEST } from "@/lib/manifest";
 import { loadTrustedManifest, type TrustedManifest } from "@/lib/registry";
-import { DEFAULT_RPCS, rpcCall } from "@/lib/rpc";
+import { DEFAULT_RPCS, rpcCall, TESTNET_RPCS } from "@/lib/rpc";
 import { checkStorage, storageWarnings } from "@/lib/storage";
 import type { ExitPlan, ExitStep, GuardVerdict, NearTx, Position } from "@/lib/types";
 import {
@@ -163,7 +163,7 @@ export default function Dashboard() {
   }, [finish]);
 
   useEffect(() => {
-    loadTrustedManifest(process.env.NEXT_PUBLIC_REGISTRY_ID, "burrow").then(setTrust, () => setTrust(null));
+    loadTrustedManifest(process.env.NEXT_PUBLIC_REGISTRY_ID, "burrow", process.env.NEXT_PUBLIC_REGISTRY_NETWORK === "testnet" ? { rpcs: TESTNET_RPCS } : {}).then(setTrust, () => setTrust(null));
   }, []);
 
   // Keys 1-4 switch sections (ignored while typing).
@@ -255,6 +255,15 @@ export default function Dashboard() {
     }
   }
 
+  function checkSample(text: string): GuardVerdict {
+    try {
+      const tx = JSON.parse(text) as NearTx;
+      return checkTx(tx, manifest, wallet ?? tx.signerId);
+    } catch {
+      return { ok: false, reasons: ["That is not a readable transaction, so it is refused."], explain: [] };
+    }
+  }
+
   function checkPasted() {
     try {
       const tx = JSON.parse(txText) as NearTx;
@@ -294,25 +303,6 @@ export default function Dashboard() {
             );
           })}
         </nav>
-
-        <div className="side-sec">Protocols</div>
-        <div className="side-proto">
-          <div className="side-prow">
-            <ProtocolIcon id="burrow" size={26} />
-            <span>Burrow</span>
-            <i className="sbadge ok">live</i>
-          </div>
-          <div className="side-prow dim">
-            <ProtocolIcon id="ref" size={26} />
-            <span>Ref Finance</span>
-            <i className="sbadge soon">soon</i>
-          </div>
-          <div className="side-prow dim">
-            <ProtocolIcon id="intents" size={26} />
-            <span>NEAR Intents</span>
-            <i className="sbadge ok">bridge</i>
-          </div>
-        </div>
 
         <div className="side-foot">
           <div className="side-net">
@@ -610,72 +600,87 @@ export default function Dashboard() {
         )}
 
         {tab === "check" && (
-          <>
-            <section className="card">
-              <div className="card-head">
-                <span className="badge-icon"><IconShield /></span>
-                <div>
-                  <div className="label">Why this exists</div>
-                  <h2>The website can lie. The transaction can&apos;t.</h2>
-                </div>
-              </div>
-              <p className="muted" style={{ margin: 0 }}>
-                When a website is hijacked, it looks exactly like the real one. What it asks your wallet to sign is the only thing that
-                matters. Paste it here and Evac reads it the way your wallet won&apos;t, and tells you in plain words whether it is a
-                withdrawal to you or something else. It runs in your browser and sends nothing anywhere.
+          <div className="chk">
+            <section className="chk-hero">
+              <div className="label">Check a transaction</div>
+              <h2>The website can lie. The transaction can&apos;t.</h2>
+              <p>
+                A hijacked site looks exactly like the real one. What it asks your wallet to sign is the only thing that matters. Paste it
+                here and Evac says in plain words whether it is a withdrawal to you or something else.
               </p>
-            </section>
-
-            <section className="card">
-              <div className="label">Try an example</div>
-              <div className="eg-grid">
-                {SAMPLES.map((x) => (
-                  <button
-                    key={x.id}
-                    type="button"
-                    className={`eg-card ${txText === x.text ? "on" : ""}`}
-                    onClick={() => {
-                      setTxText(x.text);
-                      setTxVerdict(null);
-                    }}
-                  >
-                    <b>{x.label}</b>
-                    <span>{x.hint}</span>
-                  </button>
-                ))}
-              </div>
-              <div className="label" style={{ marginTop: 18 }}>Transaction (JSON)</div>
-              <textarea className="mono-input" value={txText} onChange={(e) => { setTxText(e.target.value); setTxVerdict(null); }} aria-label="Transaction JSON" spellCheck={false} />
-              <div className="row" style={{ margin: "12px 0 0" }}>
-                <button className="btn primary" onClick={checkPasted}>
-                  <IconShield /> Check it
-                </button>
-                <span className="muted small">Checked against the exit list for {manifest.protocol}.</span>
+              <div className="chk-facts">
+                <span><IconShield /> Runs in your browser</span>
+                <span><IconCheck /> Sends nothing anywhere</span>
+                <span><IconAlert /> Fails closed</span>
               </div>
             </section>
 
-            {txVerdict && (
-              <section className={`card verdict-card ${txVerdict.ok ? "vc-ok" : "vc-bad"}`} role="status">
-                <div className="vc-head">
-                  <span className="vc-ic">{txVerdict.ok ? <IconCheck /> : <IconAlert />}</span>
-                  <div>
-                    <h2 style={{ margin: 0 }}>{txVerdict.ok ? "Looks like a plain withdrawal to you" : "Do not sign this"}</h2>
-                    <p className="muted" style={{ margin: "4px 0 0" }}>
-                      {txVerdict.ok
-                        ? "It only calls an allowed withdrawal on the protocol's contract, with exactly 1 yoctoNEAR attached."
-                        : `${txVerdict.reasons.length} problem${txVerdict.reasons.length === 1 ? "" : "s"} found. If a website is asking for this, treat the site as hijacked.`}
-                    </p>
+            <div className="chk-grid">
+              <section className="card chk-left">
+                <div className="label">Try an example</div>
+                <div className="chk-eg">
+                  {SAMPLES.map((x) => {
+                    const good = x.id === "good" || /real exit/i.test(x.label);
+                    return (
+                      <button
+                        key={x.id}
+                        type="button"
+                        className={`chk-ex ${txText === x.text ? "on" : ""} ${good ? "good" : "bad"}`}
+                        onClick={() => {
+                          setTxText(x.text);
+                          setTxVerdict(checkSample(x.text));
+                        }}
+                      >
+                        <i className="chk-dot" />
+                        <span><b>{x.label}</b><small>{x.hint}</small></span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="card chk-right">
+                <div className="chk-bar">
+                  <div className="label" style={{ margin: 0 }}>Transaction (JSON)</div>
+                  <div className="chk-tools">
+                    <button type="button" onClick={() => { try { setTxText(JSON.stringify(JSON.parse(txText), null, 2)); } catch { /* not JSON yet */ } }}>Format</button>
+                    <button type="button" onClick={() => { setTxText(""); setTxVerdict(null); }}>Clear</button>
                   </div>
                 </div>
-                <ul className="vc-list">
-                  {(txVerdict.ok ? txVerdict.explain : txVerdict.reasons).map((t, i) => (
-                    <li key={i}>{t}</li>
-                  ))}
-                </ul>
-                {!txVerdict.ok && <p className="vc-next">What to do: close the site, don&apos;t approve anything, and use the Exit tab to withdraw straight from the contracts.</p>}
+                <textarea className="mono-input chk-ta" value={txText} onChange={(e) => { setTxText(e.target.value); setTxVerdict(null); }} aria-label="Transaction JSON" spellCheck={false} placeholder="Paste the transaction a site asks you to sign" />
+                <div className="row" style={{ margin: "12px 0 0" }}>
+                  <button className="btn primary" onClick={checkPasted}>
+                    <IconShield /> Check it
+                  </button>
+                  <span className="muted small">Checked against the exit list for {manifest.protocol}.</span>
+                </div>
+
+                {txVerdict ? (
+                  <div className={`verdict-card chk-verdict ${txVerdict.ok ? "vc-ok" : "vc-bad"}`} role="status">
+                    <div className="vc-head">
+                      <span className="vc-ic">{txVerdict.ok ? <IconCheck /> : <IconAlert />}</span>
+                      <div>
+                        <h3 style={{ margin: 0, fontSize: 20 }}>{txVerdict.ok ? "Looks like a plain withdrawal to you" : "Do not sign this"}</h3>
+                        <p className="muted" style={{ margin: "4px 0 0" }}>
+                          {txVerdict.ok
+                            ? "It only calls an allowed withdrawal on the protocol's contract, with exactly 1 yoctoNEAR attached."
+                            : `${txVerdict.reasons.length} problem${txVerdict.reasons.length === 1 ? "" : "s"} found. If a website is asking for this, treat the site as hijacked.`}
+                        </p>
+                      </div>
+                    </div>
+                    <ul className="vc-list">
+                      {(txVerdict.ok ? txVerdict.explain : txVerdict.reasons).map((t, i) => (
+                        <li key={i}>{t}</li>
+                      ))}
+                    </ul>
+                    {!txVerdict.ok && <p className="vc-next">What to do: close the site, don&apos;t approve anything, and use the Exit tab to withdraw straight from the contracts.</p>}
+                  </div>
+                ) : (
+                  <p className="chk-empty">The verdict appears here.</p>
+                )}
               </section>
-            )}
-          </>
+            </div>
+          </div>
         )}
 
         {tab === "registry" && (

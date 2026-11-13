@@ -12,6 +12,9 @@ export const DEFAULT_RPCS = [
   "https://rpc.mainnet.near.org",
 ];
 
+/** Testnet providers, used only to read a registry deployed on testnet (NEXT_PUBLIC_REGISTRY_NETWORK=testnet). */
+export const TESTNET_RPCS = ["https://rpc.testnet.near.org", "https://test.rpc.fastnear.com"];
+
 export class QuorumError extends Error {
   constructor(
     message: string,
