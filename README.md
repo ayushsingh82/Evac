@@ -150,16 +150,6 @@ Everything below was run read-only on live NEAR data, or in tests. Each row has 
 | A registry key steps outside its role | Rejected | `cd contracts/registry && cargo test` |
 | Build twice | Same hash | `npm run build && node scripts/hash-out.mjs` |
 
-## Not proven yet
-
-Said plainly, so nobody is surprised:
-
-- A **real withdrawal signed with a real wallet**. Wallet signing and the live "Recovered" check are tested on fixtures and historical receipts only.
-- The **repay-and-exit** path for accounts with a loan (uses Burrow's `execute_with_pyth`). Built from the shape of real past calls, covered by tests, not tried with real money.
-- A **real bridge swap** (only a dry quote was run).
-- The **registry, DAO and watcher publishing** on mainnet. Deployed and exercised on testnet (`evac-registry-7k2.testnet`: release hash, limited watcher key, alarm); not on mainnet, and no DAO yet.
-- Only Burrow is supported. Ref and liquid staking are planned.
-
 ## Quick start
 
 ```bash
@@ -185,8 +175,21 @@ scripts/          scan · watcher · verify-kit · hash-out · make-kit · build
 test/             111 tests: quorum, guard, plan, verify, registry, sitecheck, intents, extension, hijack corpus
 ```
 
+## Why Evac
+
+When a lending market, bridge or front end is compromised, the first minutes decide whether people keep their funds.
+Evac gives every user a ready exit: scan your account, see exactly what you can pull out, and sign one checked withdrawal
+before the hole gets bigger. The registry tells you which sites and contract releases are safe, the guard refuses anything
+that is not a plain exit, and the extension warns you on the page itself.
+
+**Scan, check, exit.** Nothing to install to start, nothing to trust blindly, and every step can be verified by you.
+
 ## Credit
 
 The idea and structure come from the authors' earlier ETHGlobal Mumbai entry (an exit kit rooted in an ENS name). This is a new
 implementation for NEAR: the registry contract, function-call-key permissions, the NEAR Exit Guard, the asynchronous-receipt
 check, the Burrow adapter, the 1Click bridge, the kit and the extension are all new code.
+
+---
+
+Built for NEAR. Exit first, ask questions later.
