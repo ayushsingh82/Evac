@@ -150,31 +150,6 @@ Everything below was run read-only on live NEAR data, or in tests. Each row has 
 | A registry key steps outside its role | Rejected | `cd contracts/registry && cargo test` |
 | Build twice | Same hash | `npm run build && node scripts/hash-out.mjs` |
 
-## Quick start
-
-```bash
-npm install                                   # .npmrc sets legacy-peer-deps for the wallet libraries
-npm run dev                                   # the app on http://localhost:3000
-npm test                                      # 111 TypeScript tests
-(cd contracts/registry && cargo test)         # 15 contract tests
-
-npm run kit                                   # build the app and pack kit/evac-kit.tar.gz
-npm run extension                             # build the Chrome extension into extension/dist
-npm run demo:sites                            # local pages to demo the extension
-npx tsx scripts/scan.ts <account.near>        # scan an account from the terminal
-```
-
-## Layout
-
-```
-src/lib/          rpc (quorum) · burrow (scan, plan) · guard · wallet · verify · registry · sitecheck · intents · storage · tokens
-src/app/          the static web app: landing, /dashboard, /docs, /kit, /extension
-extension/        Chrome extension (checks the page against the registry)
-contracts/registry/   Rust registry contract (near-sdk 5.20)
-scripts/          scan · watcher · verify-kit · hash-out · make-kit · build-extension · demo-sites
-test/             111 tests: quorum, guard, plan, verify, registry, sitecheck, intents, extension, hijack corpus
-```
-
 ## Why Evac
 
 When a lending market, bridge or front end is compromised, the first minutes decide whether people keep their funds.
@@ -183,12 +158,6 @@ before the hole gets bigger. The registry tells you which sites and contract rel
 that is not a plain exit, and the extension warns you on the page itself.
 
 **Scan, check, exit.** Nothing to install to start, nothing to trust blindly, and every step can be verified by you.
-
-## Credit
-
-The idea and structure come from the authors' earlier ETHGlobal Mumbai entry (an exit kit rooted in an ENS name). This is a new
-implementation for NEAR: the registry contract, function-call-key permissions, the NEAR Exit Guard, the asynchronous-receipt
-check, the Burrow adapter, the 1Click bridge, the kit and the extension are all new code.
 
 ---
 
